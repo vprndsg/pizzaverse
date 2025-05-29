@@ -1,6 +1,5 @@
 import * as THREE from "https://unpkg.com/three@0.153.0/build/three.module.js?module";
 import { OrbitControls } from "https://unpkg.com/three@0.153.0/examples/jsm/controls/OrbitControls.js?module";
-import { nodes as rawNodes, links as rawLinks } from "./data.js";
 import { layerNames, colorFor } from "./layers.js";
 
 const scene = new THREE.Scene();
@@ -14,6 +13,7 @@ document.body.appendChild(renderer.domElement);
 
 const slider = document.getElementById("layerSlider");
 const label  = document.getElementById("layerLabel");
+const showAllToggle = document.getElementById("showAll");
 let activeLayer = parseInt(slider.value, 10);
 label.textContent = layerNames[activeLayer];
 slider.oninput = e => {
@@ -21,6 +21,7 @@ slider.oninput = e => {
   label.textContent = layerNames[activeLayer];
   updateLayerVisibility();
 };
+if(showAllToggle) showAllToggle.onchange = updateLayerVisibility;
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
@@ -30,24 +31,65 @@ controls.panSpeed = 0.5;
 controls.minDistance = 20;
 controls.maxDistance = 500;
 
-const nodes = rawNodes.map(n => ({ ...n, 
-  x:(Math.random()-0.5)*100,
-  y:(Math.random()-0.5)*100,
-  z:(Math.random()-0.5)*100,
-  vx:0,vy:0,vz:0,
-  mass:1,
-  glowSprite:null,
-  glowBaseScale:1
-}));
-const nodeIndex = {};
-nodes.forEach((n,i)=>nodeIndex[n.id]=i);
-const links = rawLinks.map(l=>({source:nodeIndex[l.source],target:nodeIndex[l.target],strength:l.strength}));
-const neighbors = {};
-nodes.forEach(n=>neighbors[n.id]=[]);
-links.forEach(l=>{
-  neighbors[nodes[l.source].id].push(nodes[l.target].id);
-  neighbors[nodes[l.target].id].push(nodes[l.source].id);
-});
+let nodes = [];
+let nodeIndex = {};
+let links = [];
+let neighbors = {};
+let counts = {};
+
+function buildGraph(rawNodes, rawLinks){
+  nodes = rawNodes.map(n => ({
+    ...n,
+    category: n.layer <= 3 ? 'wine' : 'pizza',
+    x:(Math.random()-0.5)*100,
+    y:(Math.random()-0.5)*100,
+    z:(Math.random()-0.5)*100,
+    vx:0,vy:0,vz:0,
+    mass:1,
+    glowSprite:null,
+    glowBaseScale:1
+  }));
+  nodeIndex = {};
+  nodes.forEach((n,i)=>nodeIndex[n.id]=i);
+  links = rawLinks.map(l=>({source:nodeIndex[l.source],target:nodeIndex[l.target],strength:l.strength}));
+  neighbors = {};
+  nodes.forEach(n=>neighbors[n.id]=[]);
+  links.forEach(l=>{
+    neighbors[nodes[l.source].id].push(nodes[l.target].id);
+    neighbors[nodes[l.target].id].push(nodes[l.source].id);
+  });
+
+  counts=getCookieCounts();
+  for(const [id,c] of Object.entries(counts)){ if(nodeIndex[id]!=null) nodes[nodeIndex[id]].mass=1+c;}
+
+  nodeGroup.clear();
+  lineGroup.clear();
+
+  nodes.forEach(n=>{
+    const material = (n.category==='wine'?matWine:matPizza).clone();
+    material.color.copy(colorFor(n.layer));
+    const mesh=new THREE.Mesh(sphereGeo,material);
+    mesh.position.set(n.x,n.y,n.z); mesh.userData.id=n.id;
+    nodeGroup.add(mesh);
+    if(neighbors[n.id].length>=threshold){
+      const glow=new THREE.Sprite(spriteMat.clone());
+      glow.material.color.set(n.category==='wine'?wineColor:pizzaColor);
+      const base=8*(1+0.3*(neighbors[n.id].length-1));
+      glow.scale.set(base,base,1);
+      n.glowSprite=glow; n.glowBaseScale=base;
+      mesh.add(glow);
+    }
+  });
+
+  links.forEach(l=>{
+    const a=nodes[l.source],b=nodes[l.target];
+    const g=new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute([a.x,a.y,a.z,b.x,b.y,b.z],3));
+    lineGroup.add(new THREE.Line(g,lineMat));
+  });
+
+  updateLayerVisibility();
+  animate();
+}
 
 function getCookieCounts(){
   const m=document.cookie.match(/(?:^|;)\s*interactions=([^;]+)/);
@@ -58,9 +100,6 @@ function saveCookieCounts(obj){
   const e=new Date(); e.setFullYear(e.getFullYear()+1);
   document.cookie="interactions="+encodeURIComponent(JSON.stringify(obj))+";expires="+e.toUTCString()+";path=/";
 }
-let counts=getCookieCounts();
-for(const [id,c] of Object.entries(counts)){ if(nodeIndex[id]!=null) nodes[nodeIndex[id]].mass=1+c;}
-
 const nodeGroup=new THREE.Group(), lineGroup=new THREE.Group();
 scene.add(nodeGroup); scene.add(lineGroup);
 
@@ -76,42 +115,21 @@ ctx.fillStyle=g;ctx.fillRect(0,0,s,s);return new THREE.CanvasTexture(cv);})();
 const spriteMat=new THREE.SpriteMaterial({map:glowTex,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true});
 
 const threshold=2;
-nodes.forEach(n=>{
-  const material = (n.category==='wine'?matWine:matPizza).clone();
-  material.color.copy(colorFor(n.layer));
-  const mesh=new THREE.Mesh(sphereGeo,material);
-  mesh.position.set(n.x,n.y,n.z); mesh.userData.id=n.id;
-  nodeGroup.add(mesh);
-  if(neighbors[n.id].length>=threshold){
-    const glow=new THREE.Sprite(spriteMat.clone());
-    glow.material.color.set(n.category==='wine'?wineColor:pizzaColor);
-    const base=8*(1+0.3*(neighbors[n.id].length-1));
-    glow.scale.set(base,base,1);
-    n.glowSprite=glow; n.glowBaseScale=base;
-    mesh.add(glow);
-  }
-});
+const lineMat=new THREE.LineBasicMaterial({color:0x8844ff,transparent:true,opacity:0.8});
 
 function updateLayerVisibility() {
+  const showAll = showAllToggle && showAllToggle.checked;
   nodeGroup.children.forEach(mesh => {
     const L = nodes[nodeIndex[mesh.userData.id]].layer;
-    mesh.visible = (L === activeLayer);
+    mesh.visible = showAll || (L === activeLayer);
   });
   lineGroup.children.forEach((line, i) => {
     const { source, target } = links[i];
     const LA = nodes[source].layer;
     const LB = nodes[target].layer;
-    line.visible = (LA === activeLayer || LB === activeLayer);
+    line.visible = showAll || (LA === activeLayer || LB === activeLayer);
   });
 }
-updateLayerVisibility();
-
-const lineMat=new THREE.LineBasicMaterial({color:0x8844ff,transparent:true,opacity:0.8});
-links.forEach(l=>{
-  const a=nodes[l.source],b=nodes[l.target];
-  const g=new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute([a.x,a.y,a.z,b.x,b.y,b.z],3));
-  lineGroup.add(new THREE.Line(g,lineMat));
-});
 
 const ray=new THREE.Raycaster();const mouse=new THREE.Vector2();
 let pulseIdx=[];
@@ -199,7 +217,9 @@ function animate(){
   });
   controls.update(); renderer.render(scene,camera);
 }
-animate();
+
+Promise.all([fetch('nodes.json').then(r=>r.json()), fetch('links.json').then(r=>r.json())])
+  .then(([n,l])=>buildGraph(n,l));
 
 window.addEventListener('resize',()=>{
   camera.aspect=window.innerWidth/window.innerHeight;
