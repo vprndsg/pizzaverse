@@ -130,9 +130,13 @@ function physics(){
     A.fx+=dx*f;A.fy+=dy*f;A.fz+=dz*f; B.fx-=dx*f;B.fy-=dy*f;B.fz-=dz*f;
   });
   for(let i=0;i<nodes.length;i++)for(let j=i+1;j<nodes.length;j++){
-    const A=nodes[i],B=nodes[j];let dx=B.x-A.x,dy=B.y-A.y,dz=B.z-A.z;
-    const d2=dx*dx+dy*dy+dz*dz||0.001,const d=Math.sqrt(d2);
-    const f=repK/d2; dx/=d;dy/=d;dz/=d; A.fx-=dx*f;A.fy-=dy*f;A.fz-=dz*f; B.fx+=dx*f;B.fy+=dy*f;B.fz+=dz*f;
+    const A=nodes[i], B=nodes[j];
+    let dx=B.x-A.x, dy=B.y-A.y, dz=B.z-A.z;
+    const d2 = dx*dx + dy*dy + dz*dz || 0.001;
+    const d = Math.sqrt(d2);
+    const f = repK/d2; dx/=d; dy/=d; dz/=d;
+    A.fx -= dx*f; A.fy -= dy*f; A.fz -= dz*f;
+    B.fx += dx*f; B.fy += dy*f; B.fz += dz*f;
   }
   nodes.forEach(n=>{ n.fx+=-centerK*n.x; n.fy+=-centerK*n.y; n.fz+=-centerK*n.z;});
   nodes.forEach(n=>{
