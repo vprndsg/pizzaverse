@@ -60,6 +60,7 @@ let dragPlane    = null;
 let strongMap = {};
 
 const clusterLabels = [];
+const pickables = [];
 
 const fadeInStart = 50;
 const fadeInEnd = 30;
@@ -113,15 +114,19 @@ function buildGraph(rawNodes, rawLinks){
 
   nodeGroup.clear();
   lineGroup.clear();
+  pickables.length = 0;
 
   nodes.forEach(n=>{
     n.isImportant = neighbors[n.id].length >= threshold;
     const material = (n.category==='wine'?matWine:matPizza);
     const geometry = n.category==='wine' ? sphereGeo : diskGeo;
     const mesh=new THREE.Mesh(geometry,material);
-    mesh.position.set(n.x,n.y,n.z); mesh.userData.id=n.id;
+    mesh.position.set(n.x,n.y,n.z);
+    mesh.userData.id=n.id;
+    mesh.userData.isNode = true;
     initNodeAnimationProps(mesh);
     nodeGroup.add(mesh);
+    pickables.push(mesh);
     n.mesh = mesh;
     const lbl = makeLabel(n.label, '#fff', 11);
     if(!n.isImportant) lbl.element.style.opacity = '0';
@@ -166,6 +171,8 @@ const pizzaColor=new THREE.Color(0xEFBF4C);
 const matWine=new THREE.MeshPhongMaterial({color:wineColor});
 const matPizza=new THREE.MeshPhongMaterial({color:pizzaColor});
 const sphereGeo=new THREE.SphereGeometry(2.5,16,16);
+sphereGeo.computeBoundingSphere();
+sphereGeo.boundingSphere.radius*=1.4;
 const diskGeo=new THREE.CylinderGeometry(2.5,2.5,1,16);
 diskGeo.rotateX(Math.PI/2);
 
@@ -268,9 +275,9 @@ renderer.domElement.addEventListener('pointermove',e=>{
   mouse.x=((e.clientX-r.left)/r.width)*2-1;
   mouse.y=-((e.clientY-r.top)/r.height)*2+1;
   ray.setFromCamera(mouse,camera);
-  const isects=ray.intersectObject(nodeGroup,true);
-  if(isects.length){
-    let obj=isects[0].object;if(obj.isSprite)obj=obj.parent;
+  const hit = ray.intersectObjects(pickables, false)[0];
+  if(hit){
+    let obj=hit.object;
     if(currentHover && currentHover!==obj){
       highlight(null);
     }
@@ -288,9 +295,10 @@ renderer.domElement.addEventListener('pointerdown',e=>{
   mouse.x=((e.clientX-r.left)/r.width)*2-1;
   mouse.y=-((e.clientY-r.top)/r.height)*2+1;
   ray.setFromCamera(mouse,camera);
-  const isects=ray.intersectObject(nodeGroup,true);
-  if(isects.length){
-    let obj=isects[0].object;if(obj.isSprite)obj=obj.parent;
+  const hit = ray.intersectObjects(pickables, false)[0];
+  if (hit && !hit.object.userData.isNode) return;
+  if(hit){
+    let obj=hit.object;
     const id=obj.userData.id;
     counts[id]=(counts[id]||0)+1; saveCookieCounts(counts);
     highlight(id);
