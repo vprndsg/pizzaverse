@@ -1,6 +1,7 @@
 import * as THREE from "https://unpkg.com/three@0.153.0/build/three.module.js?module";
 import { OrbitControls } from "https://unpkg.com/three@0.153.0/examples/jsm/controls/OrbitControls.js?module";
 import { nodes as rawNodes, links as rawLinks } from "./data.js";
+import { layerNames, colorFor } from "./layers.js";
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
@@ -10,6 +11,16 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio || 1);
 document.body.appendChild(renderer.domElement);
+
+const slider = document.getElementById("layerSlider");
+const label  = document.getElementById("layerLabel");
+let activeLayer = parseInt(slider.value, 10);
+label.textContent = layerNames[activeLayer];
+slider.oninput = e => {
+  activeLayer = parseInt(e.target.value, 10);
+  label.textContent = layerNames[activeLayer];
+  updateLayerVisibility();
+};
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
@@ -66,8 +77,9 @@ const spriteMat=new THREE.SpriteMaterial({map:glowTex,blending:THREE.AdditiveBle
 
 const threshold=2;
 nodes.forEach(n=>{
-  const mat=n.category==='wine'?matWine:matPizza;
-  const mesh=new THREE.Mesh(sphereGeo,mat);
+  const material = (n.category==='wine'?matWine:matPizza).clone();
+  material.color.copy(colorFor(n.layer));
+  const mesh=new THREE.Mesh(sphereGeo,material);
   mesh.position.set(n.x,n.y,n.z); mesh.userData.id=n.id;
   nodeGroup.add(mesh);
   if(neighbors[n.id].length>=threshold){
@@ -79,6 +91,20 @@ nodes.forEach(n=>{
     mesh.add(glow);
   }
 });
+
+function updateLayerVisibility() {
+  nodeGroup.children.forEach(mesh => {
+    const L = nodes[nodeIndex[mesh.userData.id]].layer;
+    mesh.visible = (L === activeLayer);
+  });
+  lineGroup.children.forEach((line, i) => {
+    const { source, target } = links[i];
+    const LA = nodes[source].layer;
+    const LB = nodes[target].layer;
+    line.visible = (LA === activeLayer || LB === activeLayer);
+  });
+}
+updateLayerVisibility();
 
 const lineMat=new THREE.LineBasicMaterial({color:0x8844ff,transparent:true,opacity:0.8});
 links.forEach(l=>{
@@ -125,9 +151,19 @@ function physics(){
   nodes.forEach(n=>{n.fx=n.fy=n.fz=0;});
   links.forEach(l=>{
     const A=nodes[l.source],B=nodes[l.target];
+    const boostA = counts[nodes[l.source].id] || 0;
+    const boostB = counts[nodes[l.target].id] || 0;
+    l.strength += 0.0003 * (boostA + boostB);
     let dx=B.x-A.x,dy=B.y-A.y,dz=B.z-A.z;const dist=Math.hypot(dx,dy,dz)||0.001;
     const f=linkK*l.strength*(dist-linkLen); dx/=dist;dy/=dist;dz/=dist;
     A.fx+=dx*f;A.fy+=dy*f;A.fz+=dz*f; B.fx-=dx*f;B.fy-=dy*f;B.fz-=dz*f;
+    [l.source, l.target].forEach(idx => {
+      const n = nodes[idx];
+      if (n.glowSprite) {
+        const alpha = Math.min(l.strength, 2) * 0.5;
+        n.glowSprite.material.opacity = alpha;
+      }
+    });
   });
   for(let i=0;i<nodes.length;i++)for(let j=i+1;j<nodes.length;j++){
     const A=nodes[i], B=nodes[j];
@@ -135,7 +171,7 @@ function physics(){
     const d2 = dx*dx + dy*dy + dz*dz || 0.001;
     const d = Math.sqrt(d2);
     const f = repK/d2; dx/=d; dy/=d; dz/=d;
-    A.fx -= dx*f; A.fy -= dy*f; A.fz -= dz*f;
+    A.fx -= dx*f; A.fy -= dy*f; A.fz -= dz*f; 
     B.fx += dx*f; B.fy += dy*f; B.fz += dz*f;
   }
   nodes.forEach(n=>{ n.fx+=-centerK*n.x; n.fy+=-centerK*n.y; n.fz+=-centerK*n.z;});
