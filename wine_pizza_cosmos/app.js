@@ -3,6 +3,11 @@ import { OrbitControls } from "https://unpkg.com/three@0.153.0/examples/jsm/cont
 import { CSS2DRenderer, CSS2DObject } from "https://unpkg.com/three@0.153.0/examples/jsm/renderers/CSS2DRenderer.js?module";
 import { layerNames } from "./layers.js";
 import { initNodeAnimationProps, setNodeScaleTarget, updateNodeScale } from "./interaction.js";
+import {
+  planeFromCamera,
+  projectPointerToPlane,
+  TUNED_PHYS
+} from './helpers/dragPhysics.js';
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
@@ -50,6 +55,8 @@ let targets = [];
 let animStart = 0;
 let animating = false;
 let selectedId = null;
+let draggingNode = null;
+let dragPlane    = null;
 let strongMap = {};
 
 const clusterLabels = [];
@@ -247,7 +254,16 @@ function updateScaleTargets(){
     setNodeScaleTarget(n.mesh, target);
   });
 }
-renderer.domElement.addEventListener('pointermove',e=>{ 
+renderer.domElement.addEventListener('pointermove',e=>{
+  if (draggingNode) {
+    const point = projectPointerToPlane(e, renderer, camera, dragPlane);
+    draggingNode.position.copy(point);
+    const nData = nodes[nodeIndex[draggingNode.userData.id]];
+    nData.x = point.x; nData.y = point.y; nData.z = point.z;
+    nData.vx = nData.vy = nData.vz = 0;
+    return;
+  }
+
   const r=renderer.domElement.getBoundingClientRect();
   mouse.x=((e.clientX-r.left)/r.width)*2-1;
   mouse.y=-((e.clientY-r.top)/r.height)*2+1;
@@ -279,6 +295,10 @@ renderer.domElement.addEventListener('pointerdown',e=>{
     counts[id]=(counts[id]||0)+1; saveCookieCounts(counts);
     highlight(id);
     selectedId=id;
+    draggingNode = obj;
+    dragPlane    = planeFromCamera({position: camera.position, target: controls.target});
+    controls.enabled = false;
+    setNodeScaleTarget(draggingNode, 1.5);
   }else{
     selectedId=null; highlight(null);
   }
@@ -286,7 +306,16 @@ renderer.domElement.addEventListener('pointerdown',e=>{
   updateLabelVisibility();
 });
 
-const linkK=0.05, linkLen=50, repK=50, centerK=0.1, damp=0.85;
+window.addEventListener('pointerup', () => {
+  if (draggingNode) {
+    setNodeScaleTarget(draggingNode, 1.2);
+    draggingNode = null;
+    controls.enabled = true;
+  }
+});
+
+const {linkK, linkLen, repulsionK:repK, centerPull:centerK} = TUNED_PHYS;
+const damp=0.85;
 function physics(){
   nodes.forEach(n=>{n.fx=n.fy=n.fz=0;});
   links.forEach(l=>{
