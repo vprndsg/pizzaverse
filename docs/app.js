@@ -1,6 +1,6 @@
 import * as THREE from "https://unpkg.com/three@0.153.0/build/three.module.js?module";
 import { OrbitControls } from "https://unpkg.com/three@0.153.0/examples/jsm/controls/OrbitControls.js?module";
-import { CSS2DRenderer, CSS2DObject } from "https://unpkg.com/three@0.153.0/examples/jsm/renderers/CSS2DRenderer.js";
+import { CSS2DRenderer, CSS2DObject } from "https://unpkg.com/three@0.153.0/examples/jsm/renderers/CSS2DRenderer.js?module";
 import { layerNames, colorFor } from "./layers.js";
 
 const scene = new THREE.Scene();
