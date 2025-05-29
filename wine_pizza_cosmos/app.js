@@ -58,6 +58,7 @@ let selectedId = null;
 let draggingNode = null;
 let dragPlane    = null;
 let strongMap = {};
+const visibleSet    = new Set();
 
 const clusterLabels = [];
 const pickables = [];
@@ -117,7 +118,6 @@ function buildGraph(rawNodes, rawLinks){
   pickables.length = 0;
 
   nodes.forEach(n=>{
-    n.isImportant = neighbors[n.id].length >= threshold;
     const material = (n.category==='wine'?matWine:matPizza);
     const geometry = n.category==='wine' ? sphereGeo : diskGeo;
     const mesh=new THREE.Mesh(geometry,material);
@@ -129,7 +129,7 @@ function buildGraph(rawNodes, rawLinks){
     pickables.push(mesh);
     n.mesh = mesh;
     const lbl = makeLabel(n.label, '#fff', 11);
-    if(!n.isImportant) lbl.element.style.opacity = '0';
+    lbl.element.style.opacity = '0';
     mesh.add(lbl);
     n.labelObj = lbl;
     if(neighbors[n.id].length>=threshold){
@@ -225,6 +225,26 @@ function highlightLines(){
   });
 }
 
+function setLabel(nodeObj, show) {
+  const el = nodeObj.children.find(o => o.isCSS2DObject)?.element;
+  if (el) el.style.opacity = show ? '1' : '0';
+}
+
+function refreshLabels() {
+  nodeGroup.children.forEach(n => setLabel(n, false));
+  visibleSet.clear();
+
+  if (!selectedId) return;
+
+  visibleSet.add(selectedId);
+  const neighbours = strongMap[selectedId] || [];
+  neighbours.forEach(id => visibleSet.add(id));
+
+  nodeGroup.children.forEach(n => {
+    if (visibleSet.has(n.userData.id)) setLabel(n, true);
+  });
+}
+
 function updateLayerVisibility() {
   const showAll = showAllToggle && showAllToggle.checked;
   nodeGroup.children.forEach(mesh => {
@@ -238,6 +258,7 @@ function updateLayerVisibility() {
     line.visible = showAll || (LA === activeLayer || LB === activeLayer);
   });
   buildClusterLabels(activeLayer);
+  refreshLabels();
   updateLabelVisibility();
 }
 
@@ -310,6 +331,7 @@ renderer.domElement.addEventListener('pointerdown',e=>{
   }else{
     selectedId=null; highlight(null);
   }
+  refreshLabels();
   updateScaleTargets();
   updateLabelVisibility();
 });
@@ -410,11 +432,9 @@ function updateLabelVisibility(){
 
   nodes.forEach(n => {
     const el = n.labelObj.element;
-    const show = (selectedId && (selectedId===n.id || (strongMap[selectedId]||[]).includes(n.id))) ||
-                 (currentHover && currentHover.userData.id===n.id) ||
-                 n.isImportant;
+    const showHover = !draggingNode && !selectedId && currentHover && currentHover.userData.id === n.id;
+    const show = visibleSet.has(n.id) || showHover;
     el.style.opacity = show ? t : 0;
-
   });
   highlightLines();
 }
