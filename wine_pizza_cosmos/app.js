@@ -2,6 +2,7 @@ import * as THREE from "https://unpkg.com/three@0.153.0/build/three.module.js?mo
 import { OrbitControls } from "https://unpkg.com/three@0.153.0/examples/jsm/controls/OrbitControls.js?module";
 import { CSS2DRenderer, CSS2DObject } from "https://unpkg.com/three@0.153.0/examples/jsm/renderers/CSS2DRenderer.js?module";
 import { layerNames } from "./layers.js";
+import { initNodeAnimationProps, setNodeScaleTarget, updateNodeScale } from "../helpers/interaction.js";
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
@@ -112,6 +113,7 @@ function buildGraph(rawNodes, rawLinks){
     const geometry = n.category==='wine' ? sphereGeo : diskGeo;
     const mesh=new THREE.Mesh(geometry,material);
     mesh.position.set(n.x,n.y,n.z); mesh.userData.id=n.id;
+    initNodeAnimationProps(mesh);
     nodeGroup.add(mesh);
     n.mesh = mesh;
     const lbl = makeLabel(n.label, '#fff', 11);
@@ -233,6 +235,18 @@ function highlight(id){
   const add=(idx)=>{if(nodes[idx].glowSprite&&!pulseIdx.includes(idx))pulseIdx.push(idx);};
   add(nodeIndex[id]);neighbors[id].forEach(nid=>add(nodeIndex[nid]));
 }
+
+function updateScaleTargets(){
+  nodes.forEach(n=>{
+    let target=1;
+    if(selectedId===n.id){
+      target=1.3;
+    }else if(currentHover && currentHover.userData.id===n.id){
+      target=1.2;
+    }
+    setNodeScaleTarget(n.mesh, target);
+  });
+}
 renderer.domElement.addEventListener('pointermove',e=>{ 
   const r=renderer.domElement.getBoundingClientRect();
   mouse.x=((e.clientX-r.left)/r.width)*2-1;
@@ -250,9 +264,10 @@ renderer.domElement.addEventListener('pointermove',e=>{
     currentHover=null;
     highlight(null);
   }
+  updateScaleTargets();
   updateLabelVisibility();
 });
-renderer.domElement.addEventListener('pointerdown',e=>{ 
+renderer.domElement.addEventListener('pointerdown',e=>{
   const r=renderer.domElement.getBoundingClientRect();
   mouse.x=((e.clientX-r.left)/r.width)*2-1;
   mouse.y=-((e.clientY-r.top)/r.height)*2+1;
@@ -267,6 +282,7 @@ renderer.domElement.addEventListener('pointerdown',e=>{
   }else{
     selectedId=null; highlight(null);
   }
+  updateScaleTargets();
   updateLabelVisibility();
 });
 
@@ -362,22 +378,18 @@ function updateLabelVisibility(){
                  n.isImportant;
     el.style.opacity = show ? t : 0;
 
-    if(selectedId===n.id){
-      n.mesh.scale.set(1.3,1.3,1.3);
-    }else if(currentHover && currentHover.userData.id===n.id){
-      n.mesh.scale.set(1.2,1.2,1.2);
-    }else{
-      n.mesh.scale.set(1,1,1);
-    }
   });
   highlightLines();
 }
 const t0=performance.now();
+const clock = new THREE.Clock();
 function animate(){
   requestAnimationFrame(animate);
   physics();
   updateAnimation();
   updateLabelVisibility();
+  const dt = clock.getDelta();
+  nodeGroup.children.forEach(m=>updateNodeScale(m, dt));
   const t=(performance.now()-t0)*0.001;
   pulseIdx.forEach(i=>{
     const n=nodes[i]; const scale=n.glowBaseScale*(1+0.3*Math.sin(t*4));
