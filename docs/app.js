@@ -1,7 +1,7 @@
 import * as THREE from "https://unpkg.com/three@0.153.0/build/three.module.js?module";
 import { OrbitControls } from "https://unpkg.com/three@0.153.0/examples/jsm/controls/OrbitControls.js?module";
 import { CSS2DRenderer, CSS2DObject } from "https://unpkg.com/three@0.153.0/examples/jsm/renderers/CSS2DRenderer.js?module";
-import { layerNames, colorFor } from "./layers.js";
+import { layerNames } from "./layers.js";
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
@@ -53,6 +53,13 @@ let strongMap = {};
 
 const clusterLabels = [];
 
+const fadeInStart = 50;
+const fadeInEnd = 30;
+const fadeOutStart = 70;
+const fadeOutEnd = 100;
+
+let currentHover = null;
+
 function makeLabel(txt, color = '#fff', size = 12) {
   const div = document.createElement('div');
   div.textContent = txt;
@@ -60,6 +67,7 @@ function makeLabel(txt, color = '#fff', size = 12) {
   div.style.font = `bold ${size}px sans-serif`;
   div.style.whiteSpace = 'nowrap';
   div.style.textShadow = '0 0 4px #000';
+  div.style.transition = 'opacity 0.5s';
   div.style.opacity = '0';
   return new CSS2DObject(div);
 }
@@ -99,12 +107,15 @@ function buildGraph(rawNodes, rawLinks){
   lineGroup.clear();
 
   nodes.forEach(n=>{
-    const material = (n.category==='wine'?matWine:matPizza).clone();
-    material.color.copy(colorFor(n.layer));
-    const mesh=new THREE.Mesh(sphereGeo,material);
+    n.isImportant = neighbors[n.id].length >= threshold;
+    const material = (n.category==='wine'?matWine:matPizza);
+    const geometry = n.category==='wine' ? sphereGeo : diskGeo;
+    const mesh=new THREE.Mesh(geometry,material);
     mesh.position.set(n.x,n.y,n.z); mesh.userData.id=n.id;
     nodeGroup.add(mesh);
+    n.mesh = mesh;
     const lbl = makeLabel(n.label, '#fff', 11);
+    if(!n.isImportant) lbl.element.style.opacity = '0';
     mesh.add(lbl);
     n.labelObj = lbl;
     if(neighbors[n.id].length>=threshold){
@@ -141,10 +152,13 @@ function saveCookieCounts(obj){
 const nodeGroup=new THREE.Group(), lineGroup=new THREE.Group();
 scene.add(nodeGroup); scene.add(lineGroup);
 
-const wineColor=new THREE.Color(0xff33ff), pizzaColor=new THREE.Color(0x33fff2);
-const matWine=new THREE.MeshBasicMaterial({color:wineColor});
-const matPizza=new THREE.MeshBasicMaterial({color:pizzaColor});
+const wineColor=new THREE.Color(0x8B0038);
+const pizzaColor=new THREE.Color(0xEFBF4C);
+const matWine=new THREE.MeshPhongMaterial({color:wineColor});
+const matPizza=new THREE.MeshPhongMaterial({color:pizzaColor});
 const sphereGeo=new THREE.SphereGeometry(2.5,16,16);
+const diskGeo=new THREE.CylinderGeometry(2.5,2.5,1,16);
+diskGeo.rotateX(Math.PI/2);
 
 const glowTex=(()=>{const s=64,cv=document.createElement('canvas');cv.width=cv.height=s;
 const ctx=cv.getContext('2d');const g=ctx.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);
@@ -219,7 +233,7 @@ function highlight(id){
   const add=(idx)=>{if(nodes[idx].glowSprite&&!pulseIdx.includes(idx))pulseIdx.push(idx);};
   add(nodeIndex[id]);neighbors[id].forEach(nid=>add(nodeIndex[nid]));
 }
-renderer.domElement.addEventListener('pointermove',e=>{
+renderer.domElement.addEventListener('pointermove',e=>{ 
   const r=renderer.domElement.getBoundingClientRect();
   mouse.x=((e.clientX-r.left)/r.width)*2-1;
   mouse.y=-((e.clientY-r.top)/r.height)*2+1;
@@ -227,10 +241,18 @@ renderer.domElement.addEventListener('pointermove',e=>{
   const isects=ray.intersectObject(nodeGroup,true);
   if(isects.length){
     let obj=isects[0].object;if(obj.isSprite)obj=obj.parent;
+    if(currentHover && currentHover!==obj){
+      highlight(null);
+    }
+    currentHover=obj;
     highlight(obj.userData.id);
-  }else highlight(null);
+  }else{
+    currentHover=null;
+    highlight(null);
+  }
+  updateLabelVisibility();
 });
-renderer.domElement.addEventListener('pointerdown',e=>{
+renderer.domElement.addEventListener('pointerdown',e=>{ 
   const r=renderer.domElement.getBoundingClientRect();
   mouse.x=((e.clientX-r.left)/r.width)*2-1;
   mouse.y=-((e.clientY-r.top)/r.height)*2+1;
@@ -241,8 +263,11 @@ renderer.domElement.addEventListener('pointerdown',e=>{
     const id=obj.userData.id;
     counts[id]=(counts[id]||0)+1; saveCookieCounts(counts);
     highlight(id);
-    selectedId=id; updateLabelVisibility();
-  }else{ selectedId=null; updateLabelVisibility(); }
+    selectedId=id;
+  }else{
+    selectedId=null; highlight(null);
+  }
+  updateLabelVisibility();
 });
 
 const linkK=0.05, linkLen=50, repK=50, centerK=0.1, damp=0.85;
@@ -319,17 +344,30 @@ function updateAnimation(){
 }
 
 function updateLabelVisibility(){
-  const camDist = camera.position.length();
-  const far = camDist > 150;
+  const dist = camera.position.distanceTo(controls.target);
+  const t = dist <= fadeInEnd ? 1 : dist >= fadeOutStart ? 0 : 1 - (dist - fadeInStart)/(fadeOutStart - fadeInStart);
+
   clusterLabels.forEach(o => {
-    o.element.style.opacity = far ? '1' : '0';
+    let op = 0;
+    if(dist > fadeOutStart){
+      op = Math.min((dist - fadeOutStart)/(fadeOutEnd - fadeOutStart),1);
+    }
+    o.element.style.opacity = op;
   });
+
   nodes.forEach(n => {
     const el = n.labelObj.element;
-    if (selectedId && (selectedId===n.id || (strongMap[selectedId]||[]).includes(n.id))) {
-      el.style.opacity = '1';
-    } else {
-      el.style.opacity = '0';
+    const show = (selectedId && (selectedId===n.id || (strongMap[selectedId]||[]).includes(n.id))) ||
+                 (currentHover && currentHover.userData.id===n.id) ||
+                 n.isImportant;
+    el.style.opacity = show ? t : 0;
+
+    if(selectedId===n.id){
+      n.mesh.scale.set(1.3,1.3,1.3);
+    }else if(currentHover && currentHover.userData.id===n.id){
+      n.mesh.scale.set(1.2,1.2,1.2);
+    }else{
+      n.mesh.scale.set(1,1,1);
     }
   });
   highlightLines();
