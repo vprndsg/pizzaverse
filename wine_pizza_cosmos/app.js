@@ -151,6 +151,7 @@ function buildGraph(rawNodes, rawLinks){
   });
 
   updateLayerVisibility();
+  refreshLabels();      // ensure no labels at start
   animate();
 }
 
@@ -227,7 +228,8 @@ function highlightLines(){
 
 function setLabel(nodeObj, show) {
   const el = nodeObj.children.find(o => o.isCSS2DObject)?.element;
-  if (el) el.style.opacity = show ? '1' : '0';
+  if (!el) return;
+  el.dataset.force = show ? '1' : '0';   // remember intent
 }
 
 function refreshLabels() {
@@ -432,9 +434,11 @@ function updateLabelVisibility(){
 
   nodes.forEach(n => {
     const el = n.labelObj.element;
-    const showHover = !draggingNode && !selectedId && currentHover && currentHover.userData.id === n.id;
-    const show = visibleSet.has(n.id) || showHover;
-    el.style.opacity = show ? t : 0;
+    // final opacity = zoomFactor * forcedFlag  OR  zoomFactor * hoverFlag
+    const forced = el.dataset.force === '1';
+    const hover  = (!draggingNode && !selectedId && currentHover && currentHover.userData.id === n.id);
+    const visible = forced || hover;
+    el.style.opacity = visible ? t : 0;
   });
   highlightLines();
 }
