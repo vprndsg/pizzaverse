@@ -2,7 +2,7 @@ import * as THREE from "https://unpkg.com/three@0.153.0/build/three.module.js?mo
 import { OrbitControls } from "https://unpkg.com/three@0.153.0/examples/jsm/controls/OrbitControls.js?module";
 import { CSS2DRenderer, CSS2DObject } from "https://unpkg.com/three@0.153.0/examples/jsm/renderers/CSS2DRenderer.js?module";
 import { layerNames } from "./layers.js";
-import { initNodeAnimationProps, setNodeScaleTarget, updateNodeScale } from "../helpers/interaction.js";
+import { initNodeAnimationProps, setNodeScaleTarget, updateNodeScale } from "./interaction.js";
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
