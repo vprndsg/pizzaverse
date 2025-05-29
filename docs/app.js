@@ -1,6 +1,6 @@
 import * as THREE from "https://unpkg.com/three@0.153.0/build/three.module.js?module";
 import { OrbitControls } from "https://unpkg.com/three@0.153.0/examples/jsm/controls/OrbitControls.js?module";
-import SpriteText from "https://unpkg.com/three-spritetext?module";
+import { CSS2DRenderer, CSS2DObject } from "https://unpkg.com/three@0.153.0/examples/jsm/renderers/CSS2DRenderer.js";
 import { layerNames, colorFor } from "./layers.js";
 
 const scene = new THREE.Scene();
@@ -11,6 +11,13 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio || 1);
 document.body.appendChild(renderer.domElement);
+
+const labelRenderer = new CSS2DRenderer();
+labelRenderer.setSize(window.innerWidth, window.innerHeight);
+labelRenderer.domElement.style.position = 'absolute';
+labelRenderer.domElement.style.top = '0px';
+labelRenderer.domElement.style.pointerEvents = 'none';
+document.body.appendChild(labelRenderer.domElement);
 
 const slider = document.getElementById("layerSlider");
 const label  = document.getElementById("layerLabel");
@@ -43,6 +50,19 @@ let animStart = 0;
 let animating = false;
 let selectedId = null;
 let strongMap = {};
+
+const clusterLabels = [];
+
+function makeLabel(txt, color = '#fff', size = 12) {
+  const div = document.createElement('div');
+  div.textContent = txt;
+  div.style.color = color;
+  div.style.font = `bold ${size}px sans-serif`;
+  div.style.whiteSpace = 'nowrap';
+  div.style.textShadow = '0 0 4px #000';
+  div.style.opacity = '0';
+  return new CSS2DObject(div);
+}
 
 function buildGraph(rawNodes, rawLinks){
   nodes = rawNodes.map(n => ({
@@ -84,10 +104,9 @@ function buildGraph(rawNodes, rawLinks){
     const mesh=new THREE.Mesh(sphereGeo,material);
     mesh.position.set(n.x,n.y,n.z); mesh.userData.id=n.id;
     nodeGroup.add(mesh);
-    const tLabel=new SpriteText(n.label,3,'#ffffff');
-    tLabel.visible=false;
-    labelGroup.add(tLabel);
-    n.labelSprite=tLabel;
+    const lbl = makeLabel(n.label, '#fff', 11);
+    mesh.add(lbl);
+    n.labelObj = lbl;
     if(neighbors[n.id].length>=threshold){
       const glow=new THREE.Sprite(spriteMat.clone());
       glow.material.color.set(n.category==='wine'?wineColor:pizzaColor);
@@ -106,12 +125,6 @@ function buildGraph(rawNodes, rawLinks){
     l.obj = ln;
   });
 
-  clusterLabelGroup.clear();
-  layerNames.forEach(name=>{
-    const cl=new SpriteText(name,5,'#ff99ff');
-    cl.visible=false; clusterLabelGroup.add(cl);
-  });
-
   updateLayerVisibility();
   animate();
 }
@@ -126,8 +139,7 @@ function saveCookieCounts(obj){
   document.cookie="interactions="+encodeURIComponent(JSON.stringify(obj))+";expires="+e.toUTCString()+";path=/";
 }
 const nodeGroup=new THREE.Group(), lineGroup=new THREE.Group();
-const labelGroup=new THREE.Group(), clusterLabelGroup=new THREE.Group();
-scene.add(nodeGroup); scene.add(lineGroup); scene.add(labelGroup); scene.add(clusterLabelGroup);
+scene.add(nodeGroup); scene.add(lineGroup);
 
 const wineColor=new THREE.Color(0xff33ff), pizzaColor=new THREE.Color(0x33fff2);
 const matWine=new THREE.MeshBasicMaterial({color:wineColor});
@@ -143,6 +155,25 @@ const spriteMat=new THREE.SpriteMaterial({map:glowTex,blending:THREE.AdditiveBle
 const threshold=2;
 const lineMat=new THREE.LineBasicMaterial({color:0x8844ff,transparent:true,opacity:0.8});
 
+function buildClusterLabels(layerIdx){
+  clusterLabels.forEach(o => scene.remove(o));
+  clusterLabels.length = 0;
+
+  const byName = {};
+  nodes.filter(n => n.layer === layerIdx).forEach(n => {
+    if(!byName[n.label]) byName[n.label] = { sum:new THREE.Vector3(), count:0 };
+    byName[n.label].sum.add(new THREE.Vector3(n.x,n.y,n.z));
+    byName[n.label].count++;
+  });
+  Object.entries(byName).forEach(([name,info]) => {
+    const pos = info.sum.multiplyScalar(1/info.count);
+    const lbl = makeLabel(name.toUpperCase(), '#ff79ff', 18);
+    lbl.position.copy(pos);
+    scene.add(lbl);
+    clusterLabels.push(lbl);
+  });
+}
+
 function highlightLines(){
   lineGroup.children.forEach((ln,i)=>{
     if(!selectedId){
@@ -152,8 +183,8 @@ function highlightLines(){
     }
     const a=nodes[links[i].source].id;
     const b=nodes[links[i].target].id;
-    const strong= (a===selectedId && (strongMap[selectedId]||[]).includes(b)) ||
-                  (b===selectedId && (strongMap[selectedId]||[]).includes(a));
+    const strong=(a===selectedId && (strongMap[selectedId]||[]).includes(b)) ||
+                 (b===selectedId && (strongMap[selectedId]||[]).includes(a));
     if(strong){
       ln.material.color.set(0xffff00);
       ln.material.opacity=1;
@@ -176,6 +207,8 @@ function updateLayerVisibility() {
     const LB = nodes[target].layer;
     line.visible = showAll || (LA === activeLayer || LB === activeLayer);
   });
+  buildClusterLabels(activeLayer);
+  updateLabelVisibility();
 }
 
 const ray=new THREE.Raycaster();const mouse=new THREE.Vector2();
@@ -208,8 +241,8 @@ renderer.domElement.addEventListener('pointerdown',e=>{
     const id=obj.userData.id;
     counts[id]=(counts[id]||0)+1; saveCookieCounts(counts);
     highlight(id);
-    selectedId=id; updateLabels();
-  }else{ selectedId=null; updateLabels(); }
+    selectedId=id; updateLabelVisibility();
+  }else{ selectedId=null; updateLabelVisibility(); }
 });
 
 const linkK=0.05, linkLen=50, repK=50, centerK=0.1, damp=0.85;
@@ -285,27 +318,19 @@ function updateAnimation(){
   if(ease>=1) animating=false;
 }
 
-function updateLabels(){
-  const dist=camera.position.length();
-  const showNodes=dist<100;
-  nodes.forEach(n=>{
-    const lab=n.labelSprite; if(!lab) return;
-    lab.position.set(n.x,n.y+4,n.z);
-    if(selectedId){
-      const strong = (strongMap[selectedId]||[]).includes(n.id);
-      lab.visible = selectedId===n.id || strong;
-    }else{
-      lab.visible = showNodes;
-    }
+function updateLabelVisibility(){
+  const camDist = camera.position.length();
+  const far = camDist > 150;
+  clusterLabels.forEach(o => {
+    o.element.style.opacity = far ? '1' : '0';
   });
-  clusterLabelGroup.children.forEach((cl,i)=>{
-    const layerNodes=nodes.filter(n=>n.layer===i);
-    if(!layerNodes.length) return;
-    const c={x:0,y:0,z:0};
-    layerNodes.forEach(n=>{c.x+=n.x;c.y+=n.y;c.z+=n.z;});
-    c.x/=layerNodes.length;c.y/=layerNodes.length;c.z/=layerNodes.length;
-    cl.position.set(c.x,c.y,c.z);
-    cl.visible=!showNodes;
+  nodes.forEach(n => {
+    const el = n.labelObj.element;
+    if (selectedId && (selectedId===n.id || (strongMap[selectedId]||[]).includes(n.id))) {
+      el.style.opacity = '1';
+    } else {
+      el.style.opacity = '0';
+    }
   });
   highlightLines();
 }
@@ -314,13 +339,15 @@ function animate(){
   requestAnimationFrame(animate);
   physics();
   updateAnimation();
-  updateLabels();
+  updateLabelVisibility();
   const t=(performance.now()-t0)*0.001;
   pulseIdx.forEach(i=>{
     const n=nodes[i]; const scale=n.glowBaseScale*(1+0.3*Math.sin(t*4));
     if(n.glowSprite)n.glowSprite.scale.set(scale,scale,1);
   });
-  controls.update(); renderer.render(scene,camera);
+  controls.update();
+  renderer.render(scene,camera);
+  labelRenderer.render(scene,camera);
 }
 
 Promise.all([fetch('nodes.json').then(r=>r.json()), fetch('links.json').then(r=>r.json())])
