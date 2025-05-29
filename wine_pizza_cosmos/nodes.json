@@ -1,0 +1,752 @@
+[
+    {
+        "id": 1,
+        "label": "Cabernet Sauvignon",
+        "layer": 0
+    },
+    {
+        "id": 2,
+        "label": "Merlot",
+        "layer": 0
+    },
+    {
+        "id": 3,
+        "label": "Pinot Noir",
+        "layer": 0
+    },
+    {
+        "id": 4,
+        "label": "Syrah",
+        "layer": 0
+    },
+    {
+        "id": 5,
+        "label": "Zinfandel",
+        "layer": 0
+    },
+    {
+        "id": 6,
+        "label": "Malbec",
+        "layer": 0
+    },
+    {
+        "id": 7,
+        "label": "Sangiovese",
+        "layer": 0
+    },
+    {
+        "id": 8,
+        "label": "Nebbiolo",
+        "layer": 0
+    },
+    {
+        "id": 9,
+        "label": "Tempranillo",
+        "layer": 0
+    },
+    {
+        "id": 10,
+        "label": "Grenache",
+        "layer": 0
+    },
+    {
+        "id": 11,
+        "label": "Cabernet Franc",
+        "layer": 0
+    },
+    {
+        "id": 12,
+        "label": "Gamay",
+        "layer": 0
+    },
+    {
+        "id": 13,
+        "label": "Barbera",
+        "layer": 0
+    },
+    {
+        "id": 14,
+        "label": "Mourvèdre",
+        "layer": 0
+    },
+    {
+        "id": 15,
+        "label": "Carménère",
+        "layer": 0
+    },
+    {
+        "id": 16,
+        "label": "Pinot Grigio",
+        "layer": 0
+    },
+    {
+        "id": 17,
+        "label": "Chardonnay",
+        "layer": 0
+    },
+    {
+        "id": 18,
+        "label": "Sauvignon Blanc",
+        "layer": 0
+    },
+    {
+        "id": 19,
+        "label": "Riesling",
+        "layer": 0
+    },
+    {
+        "id": 20,
+        "label": "Chenin Blanc",
+        "layer": 0
+    },
+    {
+        "id": 21,
+        "label": "Gewürztraminer",
+        "layer": 0
+    },
+    {
+        "id": 22,
+        "label": "Moscato",
+        "layer": 0
+    },
+    {
+        "id": 23,
+        "label": "Viognier",
+        "layer": 0
+    },
+    {
+        "id": 24,
+        "label": "Albariño",
+        "layer": 0
+    },
+    {
+        "id": 25,
+        "label": "Grüner Veltliner",
+        "layer": 0
+    },
+    {
+        "id": 26,
+        "label": "Light-bodied Red Wine",
+        "layer": 1
+    },
+    {
+        "id": 27,
+        "label": "Medium-bodied Red Wine",
+        "layer": 1
+    },
+    {
+        "id": 28,
+        "label": "Full-bodied Red Wine",
+        "layer": 1
+    },
+    {
+        "id": 29,
+        "label": "Light-bodied White Wine",
+        "layer": 1
+    },
+    {
+        "id": 30,
+        "label": "Medium-bodied White Wine",
+        "layer": 1
+    },
+    {
+        "id": 31,
+        "label": "Full-bodied White Wine",
+        "layer": 1
+    },
+    {
+        "id": 32,
+        "label": "Rosé Wine",
+        "layer": 1
+    },
+    {
+        "id": 33,
+        "label": "Sparkling White Wine",
+        "layer": 1
+    },
+    {
+        "id": 34,
+        "label": "Sparkling Rosé Wine",
+        "layer": 1
+    },
+    {
+        "id": 35,
+        "label": "Lambrusco",
+        "layer": 1
+    },
+    {
+        "id": 36,
+        "label": "Dessert Wine",
+        "layer": 1
+    },
+    {
+        "id": 37,
+        "label": "Ice Wine",
+        "layer": 1
+    },
+    {
+        "id": 38,
+        "label": "Fortified Wine",
+        "layer": 1
+    },
+    {
+        "id": 39,
+        "label": "Port Wine",
+        "layer": 1
+    },
+    {
+        "id": 40,
+        "label": "Sherry",
+        "layer": 1
+    },
+    {
+        "id": 41,
+        "label": "Madeira Wine",
+        "layer": 1
+    },
+    {
+        "id": 42,
+        "label": "Marsala Wine",
+        "layer": 1
+    },
+    {
+        "id": 43,
+        "label": "Orange Wine",
+        "layer": 1
+    },
+    {
+        "id": 44,
+        "label": "Aromatic White Wine",
+        "layer": 1
+    },
+    {
+        "id": 45,
+        "label": "Off-Dry White Wine",
+        "layer": 1
+    },
+    {
+        "id": 46,
+        "label": "White Zinfandel",
+        "layer": 1
+    },
+    {
+        "id": 47,
+        "label": "Oaked Chardonnay",
+        "layer": 1
+    },
+    {
+        "id": 48,
+        "label": "Natural Wine",
+        "layer": 1
+    },
+    {
+        "id": 49,
+        "label": "Prosecco",
+        "layer": 1
+    },
+    {
+        "id": 50,
+        "label": "Vermouth",
+        "layer": 1
+    },
+    {
+        "id": 51,
+        "label": "California",
+        "layer": 2
+    },
+    {
+        "id": 52,
+        "label": "Oregon",
+        "layer": 2
+    },
+    {
+        "id": 53,
+        "label": "Washington",
+        "layer": 2
+    },
+    {
+        "id": 54,
+        "label": "New York",
+        "layer": 2
+    },
+    {
+        "id": 55,
+        "label": "Virginia",
+        "layer": 2
+    },
+    {
+        "id": 56,
+        "label": "France",
+        "layer": 2
+    },
+    {
+        "id": 57,
+        "label": "Italy",
+        "layer": 2
+    },
+    {
+        "id": 58,
+        "label": "Spain",
+        "layer": 2
+    },
+    {
+        "id": 59,
+        "label": "Germany",
+        "layer": 2
+    },
+    {
+        "id": 60,
+        "label": "Australia",
+        "layer": 2
+    },
+    {
+        "id": 61,
+        "label": "New Zealand",
+        "layer": 2
+    },
+    {
+        "id": 62,
+        "label": "Chile",
+        "layer": 2
+    },
+    {
+        "id": 63,
+        "label": "Argentina",
+        "layer": 2
+    },
+    {
+        "id": 64,
+        "label": "South Africa",
+        "layer": 2
+    },
+    {
+        "id": 65,
+        "label": "Portugal",
+        "layer": 2
+    },
+    {
+        "id": 66,
+        "label": "Austria",
+        "layer": 2
+    },
+    {
+        "id": 67,
+        "label": "Greece",
+        "layer": 2
+    },
+    {
+        "id": 68,
+        "label": "Hungary",
+        "layer": 2
+    },
+    {
+        "id": 69,
+        "label": "Canada",
+        "layer": 2
+    },
+    {
+        "id": 70,
+        "label": "England",
+        "layer": 2
+    },
+    {
+        "id": 71,
+        "label": "China",
+        "layer": 2
+    },
+    {
+        "id": 72,
+        "label": "Lebanon",
+        "layer": 2
+    },
+    {
+        "id": 73,
+        "label": "Georgia",
+        "layer": 2
+    },
+    {
+        "id": 74,
+        "label": "Mexico",
+        "layer": 2
+    },
+    {
+        "id": 75,
+        "label": "Uruguay",
+        "layer": 2
+    },
+    {
+        "id": 76,
+        "label": "Napa Valley (CA)",
+        "layer": 3
+    },
+    {
+        "id": 77,
+        "label": "Sonoma County (CA)",
+        "layer": 3
+    },
+    {
+        "id": 78,
+        "label": "Willamette Valley (OR)",
+        "layer": 3
+    },
+    {
+        "id": 79,
+        "label": "Columbia Valley (WA)",
+        "layer": 3
+    },
+    {
+        "id": 80,
+        "label": "Finger Lakes (NY)",
+        "layer": 3
+    },
+    {
+        "id": 81,
+        "label": "Paso Robles (CA)",
+        "layer": 3
+    },
+    {
+        "id": 82,
+        "label": "Walla Walla Valley (WA)",
+        "layer": 3
+    },
+    {
+        "id": 83,
+        "label": "Bordeaux",
+        "layer": 3
+    },
+    {
+        "id": 84,
+        "label": "Burgundy",
+        "layer": 3
+    },
+    {
+        "id": 85,
+        "label": "Champagne",
+        "layer": 3
+    },
+    {
+        "id": 86,
+        "label": "Rhone Valley",
+        "layer": 3
+    },
+    {
+        "id": 87,
+        "label": "Provence",
+        "layer": 3
+    },
+    {
+        "id": 88,
+        "label": "Tuscany",
+        "layer": 3
+    },
+    {
+        "id": 89,
+        "label": "Chianti",
+        "layer": 3
+    },
+    {
+        "id": 90,
+        "label": "Sicily",
+        "layer": 3
+    },
+    {
+        "id": 91,
+        "label": "Rioja",
+        "layer": 3
+    },
+    {
+        "id": 92,
+        "label": "Mosel",
+        "layer": 3
+    },
+    {
+        "id": 93,
+        "label": "Barossa Valley",
+        "layer": 3
+    },
+    {
+        "id": 94,
+        "label": "Marlborough",
+        "layer": 3
+    },
+    {
+        "id": 95,
+        "label": "Mendoza",
+        "layer": 3
+    },
+    {
+        "id": 96,
+        "label": "Stellenbosch",
+        "layer": 3
+    },
+    {
+        "id": 97,
+        "label": "Maipo Valley",
+        "layer": 3
+    },
+    {
+        "id": 98,
+        "label": "Santa Barbara County (CA)",
+        "layer": 3
+    },
+    {
+        "id": 99,
+        "label": "Lodi (CA)",
+        "layer": 3
+    },
+    {
+        "id": 100,
+        "label": "Douro",
+        "layer": 3
+    },
+    {
+        "id": 101,
+        "label": "Neapolitan Pizza",
+        "layer": 4
+    },
+    {
+        "id": 102,
+        "label": "New York Style Pizza",
+        "layer": 4
+    },
+    {
+        "id": 103,
+        "label": "Chicago Deep Dish",
+        "layer": 4
+    },
+    {
+        "id": 104,
+        "label": "Chicago Thin Crust",
+        "layer": 4
+    },
+    {
+        "id": 105,
+        "label": "Sicilian Pizza",
+        "layer": 4
+    },
+    {
+        "id": 106,
+        "label": "Detroit Style Pizza",
+        "layer": 4
+    },
+    {
+        "id": 107,
+        "label": "St. Louis Style Pizza",
+        "layer": 4
+    },
+    {
+        "id": 108,
+        "label": "California Style Pizza",
+        "layer": 4
+    },
+    {
+        "id": 109,
+        "label": "New Haven Style Pizza",
+        "layer": 4
+    },
+    {
+        "id": 110,
+        "label": "Roman Style Pizza",
+        "layer": 4
+    },
+    {
+        "id": 111,
+        "label": "Greek Pizza",
+        "layer": 4
+    },
+    {
+        "id": 112,
+        "label": "Grandma Pizza",
+        "layer": 4
+    },
+    {
+        "id": 113,
+        "label": "Stuffed Pizza",
+        "layer": 4
+    },
+    {
+        "id": 114,
+        "label": "Margherita Pizza",
+        "layer": 4
+    },
+    {
+        "id": 115,
+        "label": "Pepperoni Pizza",
+        "layer": 4
+    },
+    {
+        "id": 116,
+        "label": "Hawaiian Pizza",
+        "layer": 4
+    },
+    {
+        "id": 117,
+        "label": "Meat Lover's Pizza",
+        "layer": 4
+    },
+    {
+        "id": 118,
+        "label": "Veggie Pizza",
+        "layer": 4
+    },
+    {
+        "id": 119,
+        "label": "BBQ Chicken Pizza",
+        "layer": 4
+    },
+    {
+        "id": 120,
+        "label": "White Pizza",
+        "layer": 4
+    },
+    {
+        "id": 121,
+        "label": "Supreme Pizza",
+        "layer": 4
+    },
+    {
+        "id": 122,
+        "label": "Quattro Formaggi Pizza",
+        "layer": 4
+    },
+    {
+        "id": 123,
+        "label": "Buffalo Chicken Pizza",
+        "layer": 4
+    },
+    {
+        "id": 124,
+        "label": "Cheese Pizza",
+        "layer": 4
+    },
+    {
+        "id": 125,
+        "label": "Capricciosa Pizza",
+        "layer": 4
+    },
+    {
+        "id": 126,
+        "label": "Pepperoni",
+        "layer": 5
+    },
+    {
+        "id": 127,
+        "label": "Sausage",
+        "layer": 5
+    },
+    {
+        "id": 128,
+        "label": "Bacon",
+        "layer": 5
+    },
+    {
+        "id": 129,
+        "label": "Ham",
+        "layer": 5
+    },
+    {
+        "id": 130,
+        "label": "Chicken",
+        "layer": 5
+    },
+    {
+        "id": 131,
+        "label": "Meatballs",
+        "layer": 5
+    },
+    {
+        "id": 132,
+        "label": "Mushrooms",
+        "layer": 5
+    },
+    {
+        "id": 133,
+        "label": "Onions",
+        "layer": 5
+    },
+    {
+        "id": 134,
+        "label": "Bell Peppers",
+        "layer": 5
+    },
+    {
+        "id": 135,
+        "label": "Olives",
+        "layer": 5
+    },
+    {
+        "id": 136,
+        "label": "Pineapple",
+        "layer": 5
+    },
+    {
+        "id": 137,
+        "label": "Anchovies",
+        "layer": 5
+    },
+    {
+        "id": 138,
+        "label": "Basil",
+        "layer": 5
+    },
+    {
+        "id": 139,
+        "label": "Garlic",
+        "layer": 5
+    },
+    {
+        "id": 140,
+        "label": "Spinach",
+        "layer": 5
+    },
+    {
+        "id": 141,
+        "label": "Artichokes",
+        "layer": 5
+    },
+    {
+        "id": 142,
+        "label": "Jalapeños",
+        "layer": 5
+    },
+    {
+        "id": 143,
+        "label": "Prosciutto",
+        "layer": 5
+    },
+    {
+        "id": 144,
+        "label": "Arugula",
+        "layer": 5
+    },
+    {
+        "id": 145,
+        "label": "Goat Cheese",
+        "layer": 5
+    },
+    {
+        "id": 146,
+        "label": "Sun-dried Tomatoes",
+        "layer": 5
+    },
+    {
+        "id": 147,
+        "label": "Eggplant",
+        "layer": 5
+    },
+    {
+        "id": 148,
+        "label": "Salami",
+        "layer": 5
+    },
+    {
+        "id": 149,
+        "label": "Egg",
+        "layer": 5
+    },
+    {
+        "id": 150,
+        "label": "Clams",
+        "layer": 5
+    }
+]
