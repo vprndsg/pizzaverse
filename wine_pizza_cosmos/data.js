@@ -1,12 +1,13 @@
 export const nodes = [
-  { id: "merlot", category: "wine" },
-  { id: "cabernet", category: "wine" },
-  { id: "pinotnoir", category: "wine" },
-  { id: "chardonnay", category: "wine" },
-  { id: "pepperoni", category: "pizza" },
-  { id: "margherita", category: "pizza" },
-  { id: "bbqchicken", category: "pizza" },
-  { id: "mushroom", category: "pizza" }
+  { id: "merlot",      category: "wine",  layer: 0 },
+  { id: "cabernet",    category: "wine",  layer: 0 },
+  { id: "pinotnoir",   category: "wine",  layer: 0 },
+  { id: "chardonnay",  category: "wine",  layer: 0 },
+
+  { id: "pepperoni",   category: "pizza", layer: 5 },
+  { id: "margherita",  category: "pizza", layer: 5 },
+  { id: "bbqchicken",  category: "pizza", layer: 5 },
+  { id: "mushroom",    category: "pizza", layer: 5 }
 ];
 
 export const links = [
