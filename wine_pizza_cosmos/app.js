@@ -229,7 +229,7 @@ function highlightLines(){
 function setLabel(nodeObj, show) {
   const el = nodeObj.children.find(o => o.isCSS2DObject)?.element;
   if (!el) return;
-  el.dataset.force = show ? '1' : '0';   // remember intent
+  el.dataset.force = show ? '1' : '0';  // set the forced visibility flag
 }
 
 function refreshLabels() {
@@ -422,24 +422,27 @@ function updateAnimation(){
 
 function updateLabelVisibility(){
   const dist = camera.position.distanceTo(controls.target);
-  const t = dist <= fadeInEnd ? 1 : dist >= fadeOutStart ? 0 : 1 - (dist - fadeInStart)/(fadeOutStart - fadeInStart);
+
+  const zoomFactor = dist <= fadeInEnd ? 1 : dist >= fadeOutStart ? 0 :
+                     1 - (dist - fadeInStart) / (fadeOutStart - fadeInStart);
 
   clusterLabels.forEach(o => {
-    let op = 0;
+    let opacity = 0;
     if(dist > fadeOutStart){
-      op = Math.min((dist - fadeOutStart)/(fadeOutEnd - fadeOutStart),1);
+      opacity = Math.min((dist - fadeOutStart)/(fadeOutEnd - fadeOutStart), 1);
     }
-    o.element.style.opacity = op;
+    o.element.style.opacity = opacity;
   });
 
   nodes.forEach(n => {
     const el = n.labelObj.element;
-    // final opacity = zoomFactor * forcedFlag  OR  zoomFactor * hoverFlag
-    const forced = el.dataset.force === '1';
-    const hover  = (!draggingNode && !selectedId && currentHover && currentHover.userData.id === n.id);
-    const visible = forced || hover;
-    el.style.opacity = visible ? t : 0;
+
+    const isSelectedOrNeighbor = visibleSet.has(n.id);
+    const isHovered = !draggingNode && !selectedId && currentHover && currentHover.userData.id === n.id;
+
+    el.style.opacity = (isSelectedOrNeighbor || isHovered) ? zoomFactor : 0;
   });
+
   highlightLines();
 }
 const t0=performance.now();
