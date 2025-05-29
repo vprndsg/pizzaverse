@@ -189,18 +189,22 @@ function buildClusterLabels(layerIdx){
   clusterLabels.forEach(o => scene.remove(o));
   clusterLabels.length = 0;
 
-  const byName = {};
-  nodes.filter(n => n.layer === layerIdx).forEach(n => {
-    if(!byName[n.label]) byName[n.label] = { sum:new THREE.Vector3(), count:0 };
-    byName[n.label].sum.add(new THREE.Vector3(n.x,n.y,n.z));
-    byName[n.label].count++;
-  });
-  Object.entries(byName).forEach(([name,info]) => {
-    const pos = info.sum.multiplyScalar(1/info.count);
-    const lbl = makeLabel(name.toUpperCase(), '#ff79ff', 18);
-    lbl.position.copy(pos);
+  const layerNodes = nodes.filter(n => n.layer === layerIdx);
+
+  layerNodes.forEach(n => {
+    const lbl = makeLabel(n.label.toUpperCase(), '#ff79ff', 18);
+    lbl.position.set(n.x, n.y, n.z);
+    lbl.userData.id = n.id;
     scene.add(lbl);
     clusterLabels.push(lbl);
+  });
+}
+
+function updateClusterLabelPositions() {
+  clusterLabels.forEach(lbl => {
+    const nodeId = lbl.userData.id;
+    const node = nodes[nodeIndex[nodeId]];
+    if(node) lbl.position.set(node.x, node.y, node.z);
   });
 }
 
@@ -425,6 +429,7 @@ function animate(){
   requestAnimationFrame(animate);
   physics();
   updateAnimation();
+  updateClusterLabelPositions();
   updateLabelVisibility();
   const dt = clock.getDelta();
   nodeGroup.children.forEach(m=>updateNodeScale(m, dt));
