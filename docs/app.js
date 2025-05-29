@@ -1,5 +1,5 @@
-import * as THREE from "https://unpkg.com/three@0.153.0/build/three.module.js";
-import { OrbitControls } from "https://unpkg.com/three@0.153.0/examples/jsm/controls/OrbitControls.js";
+import * as THREE from "https://unpkg.com/three@0.153.0/build/three.module.js?module";
+import { OrbitControls } from "https://unpkg.com/three@0.153.0/examples/jsm/controls/OrbitControls.js?module";
 import { nodes as rawNodes, links as rawLinks } from "./data.js";
 
 const scene = new THREE.Scene();
