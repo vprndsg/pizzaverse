@@ -1,19 +1,20 @@
+import eslintPluginImport from 'eslint-plugin-import';
+
 export default [
   {
-    files: ["**/*.js"],
+    ignores: ['node_modules/**', '*.json', 'dist/**'],
+    files: ['**/*.js'],
     languageOptions: {
       ecmaVersion: 2022,
-      sourceType: "module",
-      globals: {
-        window: true,
-        document: true
-      }
+      sourceType: 'module',
+      globals: { window: true, document: true }
     },
+    plugins: { import: eslintPluginImport },
     rules: {
-      // Example: You can add rules here (see eslint.org/docs)
-      semi: "error",
-      "no-unused-vars": "warn",
-      "no-console": "off"
+      semi: 'error',
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      'no-duplicate-imports': 'error',
+      'import/no-unresolved': 'off' // CDN imports
     }
   }
 ];
