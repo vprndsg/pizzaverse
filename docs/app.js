@@ -101,7 +101,9 @@ function buildGraph(rawNodes, rawLinks){
   links.forEach(l=>{
     const a=nodes[l.source],b=nodes[l.target];
     const g=new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute([a.x,a.y,a.z,b.x,b.y,b.z],3));
-    lineGroup.add(new THREE.Line(g,lineMat));
+    const ln = new THREE.Line(g,lineMat.clone());
+    lineGroup.add(ln);
+    l.obj = ln;
   });
 
   clusterLabelGroup.clear();
@@ -140,6 +142,27 @@ const spriteMat=new THREE.SpriteMaterial({map:glowTex,blending:THREE.AdditiveBle
 
 const threshold=2;
 const lineMat=new THREE.LineBasicMaterial({color:0x8844ff,transparent:true,opacity:0.8});
+
+function highlightLines(){
+  lineGroup.children.forEach((ln,i)=>{
+    if(!selectedId){
+      ln.material.color.set(0x8844ff);
+      ln.material.opacity=0.2;
+      return;
+    }
+    const a=nodes[links[i].source].id;
+    const b=nodes[links[i].target].id;
+    const strong= (a===selectedId && (strongMap[selectedId]||[]).includes(b)) ||
+                  (b===selectedId && (strongMap[selectedId]||[]).includes(a));
+    if(strong){
+      ln.material.color.set(0xffff00);
+      ln.material.opacity=1;
+    }else{
+      ln.material.color.set(0x8844ff);
+      ln.material.opacity=0.1;
+    }
+  });
+}
 
 function updateLayerVisibility() {
   const showAll = showAllToggle && showAllToggle.checked;
@@ -268,7 +291,12 @@ function updateLabels(){
   nodes.forEach(n=>{
     const lab=n.labelSprite; if(!lab) return;
     lab.position.set(n.x,n.y+4,n.z);
-    lab.visible=showNodes&&(selectedId?selectedId===n.id|| (strongMap[selectedId]||[]).includes(n.id):true);
+    if(selectedId){
+      const strong = (strongMap[selectedId]||[]).includes(n.id);
+      lab.visible = selectedId===n.id || strong;
+    }else{
+      lab.visible = showNodes;
+    }
   });
   clusterLabelGroup.children.forEach((cl,i)=>{
     const layerNodes=nodes.filter(n=>n.layer===i);
@@ -279,6 +307,7 @@ function updateLabels(){
     cl.position.set(c.x,c.y,c.z);
     cl.visible=!showNodes;
   });
+  highlightLines();
 }
 const t0=performance.now();
 function animate(){
