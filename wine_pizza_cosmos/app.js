@@ -1,5 +1,6 @@
 import * as THREE from "https://unpkg.com/three@0.153.0/build/three.module.js?module";
 import { OrbitControls } from "https://unpkg.com/three@0.153.0/examples/jsm/controls/OrbitControls.js?module";
+import SpriteText from "https://unpkg.com/three-spritetext?module";
 import { layerNames, colorFor } from "./layers.js";
 
 const scene = new THREE.Scene();
@@ -19,6 +20,7 @@ label.textContent = layerNames[activeLayer];
 slider.oninput = e => {
   activeLayer = parseInt(e.target.value, 10);
   label.textContent = layerNames[activeLayer];
+  startLayerAnimation();
   updateLayerVisibility();
 };
 if(showAllToggle) showAllToggle.onchange = updateLayerVisibility;
@@ -36,6 +38,11 @@ let nodeIndex = {};
 let links = [];
 let neighbors = {};
 let counts = {};
+let targets = [];
+let animStart = 0;
+let animating = false;
+let selectedId = null;
+let strongMap = {};
 
 function buildGraph(rawNodes, rawLinks){
   nodes = rawNodes.map(n => ({
@@ -54,9 +61,15 @@ function buildGraph(rawNodes, rawLinks){
   links = rawLinks.map(l=>({source:nodeIndex[l.source],target:nodeIndex[l.target],strength:l.strength}));
   neighbors = {};
   nodes.forEach(n=>neighbors[n.id]=[]);
+  strongMap={};
   links.forEach(l=>{
     neighbors[nodes[l.source].id].push(nodes[l.target].id);
     neighbors[nodes[l.target].id].push(nodes[l.source].id);
+    if(l.strength>0.8){
+      const a=nodes[l.source].id,b=nodes[l.target].id;
+      if(!strongMap[a])strongMap[a]=[]; if(!strongMap[b])strongMap[b]=[];
+      strongMap[a].push(b); strongMap[b].push(a);
+    }
   });
 
   counts=getCookieCounts();
@@ -71,6 +84,10 @@ function buildGraph(rawNodes, rawLinks){
     const mesh=new THREE.Mesh(sphereGeo,material);
     mesh.position.set(n.x,n.y,n.z); mesh.userData.id=n.id;
     nodeGroup.add(mesh);
+    const tLabel=new SpriteText(n.label,3,'#ffffff');
+    tLabel.visible=false;
+    labelGroup.add(tLabel);
+    n.labelSprite=tLabel;
     if(neighbors[n.id].length>=threshold){
       const glow=new THREE.Sprite(spriteMat.clone());
       glow.material.color.set(n.category==='wine'?wineColor:pizzaColor);
@@ -87,6 +104,12 @@ function buildGraph(rawNodes, rawLinks){
     lineGroup.add(new THREE.Line(g,lineMat));
   });
 
+  clusterLabelGroup.clear();
+  layerNames.forEach(name=>{
+    const cl=new SpriteText(name,5,'#ff99ff');
+    cl.visible=false; clusterLabelGroup.add(cl);
+  });
+
   updateLayerVisibility();
   animate();
 }
@@ -101,7 +124,8 @@ function saveCookieCounts(obj){
   document.cookie="interactions="+encodeURIComponent(JSON.stringify(obj))+";expires="+e.toUTCString()+";path=/";
 }
 const nodeGroup=new THREE.Group(), lineGroup=new THREE.Group();
-scene.add(nodeGroup); scene.add(lineGroup);
+const labelGroup=new THREE.Group(), clusterLabelGroup=new THREE.Group();
+scene.add(nodeGroup); scene.add(lineGroup); scene.add(labelGroup); scene.add(clusterLabelGroup);
 
 const wineColor=new THREE.Color(0xff33ff), pizzaColor=new THREE.Color(0x33fff2);
 const matWine=new THREE.MeshBasicMaterial({color:wineColor});
@@ -161,7 +185,8 @@ renderer.domElement.addEventListener('pointerdown',e=>{
     const id=obj.userData.id;
     counts[id]=(counts[id]||0)+1; saveCookieCounts(counts);
     highlight(id);
-  }
+    selectedId=id; updateLabels();
+  }else{ selectedId=null; updateLabels(); }
 });
 
 const linkK=0.05, linkLen=50, repK=50, centerK=0.1, damp=0.85;
@@ -206,10 +231,61 @@ function physics(){
     l.geometry.attributes.position.needsUpdate=true;
   });
 }
+
+function startLayerAnimation(){
+  targets = nodes.map(n=>({x:n.x,y:n.y,z:n.z}));
+  const layerNodes = nodes.filter(n=>n.layer===activeLayer);
+  if(!layerNodes.length) return;
+  const centroid={x:0,y:0,z:0};
+  layerNodes.forEach(n=>{centroid.x+=n.x;centroid.y+=n.y;centroid.z+=n.z;});
+  centroid.x/=layerNodes.length; centroid.y/=layerNodes.length; centroid.z/=layerNodes.length;
+  const radius=60;
+  layerNodes.forEach((n,i)=>{
+    const a=i*2*Math.PI/layerNodes.length;
+    targets[nodeIndex[n.id]]={x:centroid.x+radius*Math.cos(a),y:centroid.y+radius*Math.sin(a),z:centroid.z};
+  });
+  nodes.forEach(n=>{ if(n.layer!==activeLayer) targets[nodeIndex[n.id]]={x:centroid.x*0.2,y:centroid.y*0.2,z:centroid.z*0.2}; });
+  animStart=performance.now(); animating=true;
+}
+
+function updateAnimation(){
+  if(!animating) return;
+  const t=(performance.now()-animStart)/1000;
+  const ease=Math.min(1,t/1); // 1s
+  nodes.forEach((n,i)=>{
+    const trg=targets[i];
+    if(!trg) return;
+    n.x+= (trg.x-n.x)*0.1;
+    n.y+= (trg.y-n.y)*0.1;
+    n.z+= (trg.z-n.z)*0.1;
+  });
+  if(ease>=1) animating=false;
+}
+
+function updateLabels(){
+  const dist=camera.position.length();
+  const showNodes=dist<100;
+  nodes.forEach(n=>{
+    const lab=n.labelSprite; if(!lab) return;
+    lab.position.set(n.x,n.y+4,n.z);
+    lab.visible=showNodes&&(selectedId?selectedId===n.id|| (strongMap[selectedId]||[]).includes(n.id):true);
+  });
+  clusterLabelGroup.children.forEach((cl,i)=>{
+    const layerNodes=nodes.filter(n=>n.layer===i);
+    if(!layerNodes.length) return;
+    const c={x:0,y:0,z:0};
+    layerNodes.forEach(n=>{c.x+=n.x;c.y+=n.y;c.z+=n.z;});
+    c.x/=layerNodes.length;c.y/=layerNodes.length;c.z/=layerNodes.length;
+    cl.position.set(c.x,c.y,c.z);
+    cl.visible=!showNodes;
+  });
+}
 const t0=performance.now();
 function animate(){
   requestAnimationFrame(animate);
   physics();
+  updateAnimation();
+  updateLabels();
   const t=(performance.now()-t0)*0.001;
   pulseIdx.forEach(i=>{
     const n=nodes[i]; const scale=n.glowBaseScale*(1+0.3*Math.sin(t*4));
