@@ -213,9 +213,8 @@ function highlightLines(){
     }
     const a=nodes[links[i].source].id;
     const b=nodes[links[i].target].id;
-    const strong=(a===selectedId && (strongMap[selectedId]||[]).includes(b)) ||
-                 (b===selectedId && (strongMap[selectedId]||[]).includes(a));
-    if(strong){
+    const connected=(a===selectedId || b===selectedId);
+    if(connected){
       ln.material.color.set(0xffff00);
       ln.material.opacity=1;
     }else{
@@ -410,9 +409,11 @@ function updateLabelVisibility(){
 
   nodes.forEach(n => {
     const el = n.labelObj.element;
-    const show = (selectedId && (selectedId===n.id || (strongMap[selectedId]||[]).includes(n.id))) ||
-                 (currentHover && currentHover.userData.id===n.id) ||
-                 n.isImportant;
+    const isSelected = selectedId && selectedId === n.id;
+    const isNeighbor = selectedId && (neighbors[selectedId] || []).includes(n.id);
+    const isHover = currentHover && currentHover.userData.id === n.id;
+    const isActiveImportant = n.layer === activeLayer && n.isImportant;
+    const show = isSelected || isNeighbor || isHover || isActiveImportant;
     el.style.opacity = show ? t : 0;
 
   });
