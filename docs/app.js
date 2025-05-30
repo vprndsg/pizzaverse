@@ -345,7 +345,8 @@ renderer.domElement.addEventListener('pointermove',e=>{
   mouse.x=((e.clientX-r.left)/r.width)*2-1;
   mouse.y=-((e.clientY-r.top)/r.height)*2+1;
   ray.setFromCamera(mouse,camera);
-  const hit = ray.intersectObjects(pickables, false)[0];
+  const visiblePickables = pickables.filter(obj => obj.visible);
+  const hit = ray.intersectObjects(visiblePickables, false)[0];
   if(hit){
     let obj=hit.object;
     if(currentHover && currentHover!==obj){
@@ -395,7 +396,8 @@ renderer.domElement.addEventListener('pointerdown', e => {
   mouse.y = -((e.clientY - r.top) / r.height) * 2 + 1;
   ray.setFromCamera(mouse, camera);
 
-  const hit = ray.intersectObjects(pickables, false)[0];
+  const visiblePickables = pickables.filter(obj => obj.visible);
+  const hit = ray.intersectObjects(visiblePickables, false)[0];
   pointerDownOnEmpty = !(hit && hit.object.userData.isNode);
   if (pointerDownOnEmpty) return;
 
