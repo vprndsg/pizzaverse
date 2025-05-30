@@ -35,6 +35,7 @@ slider.oninput = e => {
   label.textContent = layerNames[activeLayer];
   startLayerAnimation();
   updateLayerVisibility();
+  applySelection();
 };
 if(showAllToggle) showAllToggle.onchange = updateLayerVisibility;
 
@@ -54,10 +55,10 @@ let counts = {};
 let targets = [];
 let animStart = 0;
 let animating = false;
-let selectedId = null;
 let draggingNode = null;
 let dragPlane    = null;
 let strongMap = {};
+const visibleSet    = new Set();
 
 const clusterLabels = [];
 const pickables = [];
@@ -118,9 +119,9 @@ function buildGraph(rawNodes, rawLinks){
 
   nodes.forEach(n=>{
     n.isImportant = neighbors[n.id].length >= threshold;
-    const material = (n.category==='wine'?matWine:matPizza);
-    const geometry = n.category==='wine' ? sphereGeo : diskGeo;
-    const mesh=new THREE.Mesh(geometry,material);
+    const baseMat = n.category === 'wine' ? matWine : matPizza;
+    const geometry = n.category === 'wine' ? sphereGeo : diskGeo;
+    const mesh = new THREE.Mesh(geometry, baseMat.clone());
     mesh.position.set(n.x,n.y,n.z);
     mesh.userData.id=n.id;
     mesh.userData.isNode = true;
@@ -168,8 +169,8 @@ scene.add(nodeGroup); scene.add(lineGroup);
 
 const wineColor=new THREE.Color(0x8B0038);
 const pizzaColor=new THREE.Color(0xEFBF4C);
-const matWine=new THREE.MeshPhongMaterial({color:wineColor});
-const matPizza=new THREE.MeshPhongMaterial({color:pizzaColor});
+const matWine  = new THREE.MeshPhongMaterial({ color:wineColor,  transparent:true });
+const matPizza = new THREE.MeshPhongMaterial({ color:pizzaColor, transparent:true });
 const sphereGeo=new THREE.SphereGeometry(2.5,16,16);
 sphereGeo.computeBoundingSphere();
 sphereGeo.boundingSphere.radius*=1.4;
@@ -228,6 +229,27 @@ function highlightLines(){
   });
 }
 
+function setLabel(nodeObj, show) {
+  const el = nodeObj.children.find(o => o.isCSS2DObject)?.element;
+  if (!el) return;
+  el.dataset.force = show ? '1' : '0';  // set the forced visibility flag
+}
+
+function refreshLabels() {
+  nodeGroup.children.forEach(n => setLabel(n, false));
+  visibleSet.clear();
+
+  if (!selectedId) return;
+
+  visibleSet.add(selectedId);
+  const neighbours = neighbors[selectedId] || [];
+  neighbours.forEach(id => visibleSet.add(id));
+
+  nodeGroup.children.forEach(n => {
+    if (visibleSet.has(n.userData.id)) setLabel(n, true);
+  });
+}
+
 function updateLayerVisibility() {
   const showAll = showAllToggle && showAllToggle.checked;
   nodeGroup.children.forEach(mesh => {
@@ -244,7 +266,40 @@ function updateLayerVisibility() {
   updateLabelVisibility();
 }
 
+function applySelection () {
+  const connected = new Set();
+  if (selectedId) neighbors[selectedId].forEach(id => connected.add(id));
+
+  // nodes
+  nodeGroup.children.forEach(m => {
+    const id   = m.userData.id;
+    const L    = nodes[nodeIndex[id]].layer;
+    const seen = !selectedId || id === selectedId || connected.has(id);
+
+    m.material.transparent = true;
+    m.material.opacity     = seen ? 1 : 0.15;
+    m.visible              = seen || (showAllToggle && showAllToggle.checked) || L === activeLayer;
+
+    if (m.glowSprite) m.glowSprite.material.opacity = seen ? 1 : 0.05;
+  });
+
+  // links
+  lineGroup.children.forEach((ln, i) => {
+    const { source, target } = links[i];
+    const A = nodes[source].id, B = nodes[target].id;
+    const seen = !selectedId || A === selectedId || B === selectedId;
+
+    ln.visible           = seen;
+    ln.material.opacity  = seen ? 1 : 0.15;
+    ln.material.color.set(seen ? 0xffff00 : 0x8844ff);   // yellow focus lines
+  });
+
+  refreshLabels();
+}
+
 const ray=new THREE.Raycaster();const mouse=new THREE.Vector2();
+let selectedId = null;                 // current focus, or null
+const linkBase = new Map();            // remembers original strengths
 let pulseIdx=[];
 function highlight(id){
   pulseIdx=[];
@@ -293,28 +348,45 @@ renderer.domElement.addEventListener('pointermove',e=>{
   updateScaleTargets();
   updateLabelVisibility();
 });
-renderer.domElement.addEventListener('pointerdown',e=>{
-  const r=renderer.domElement.getBoundingClientRect();
-  mouse.x=((e.clientX-r.left)/r.width)*2-1;
-  mouse.y=-((e.clientY-r.top)/r.height)*2+1;
-  ray.setFromCamera(mouse,camera);
+
+function selectNode (id) {
+  selectedId = id;
+
+  // make springs stiffer on the star node
+  links.forEach(l => {
+    const picks = l.source === nodeIndex[id] || l.target === nodeIndex[id];
+    if (picks) {
+      if (!linkBase.has(l)) linkBase.set(l, l.strength);
+      l.strength = linkBase.get(l) * 2;
+    } else if (linkBase.has(l)) {
+      l.strength = linkBase.get(l);
+    }
+  });
+
+  // centre the orbit-controls target so the camera keeps circling the node
+  controls.target.copy(nodes[nodeIndex[id]]);
+  controls.update();
+
+  applySelection();
+}
+
+function clearSelection () {
+  selectedId = null;
+  linkBase.forEach((s, l) => (l.strength = s));
+  applySelection();
+}
+renderer.domElement.addEventListener('pointerdown', e => {
+  const r = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+  mouse.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+  ray.setFromCamera(mouse, camera);
+
   const hit = ray.intersectObjects(pickables, false)[0];
-  if (hit && !hit.object.userData.isNode) return;
-  if(hit){
-    let obj=hit.object;
-    const id=obj.userData.id;
-    counts[id]=(counts[id]||0)+1; saveCookieCounts(counts);
-    highlight(id);
-    selectedId=id;
-    draggingNode = obj;
-    dragPlane    = planeFromCamera({position: camera.position, target: controls.target});
-    controls.enabled = false;
-    setNodeScaleTarget(draggingNode, 1.5);
-  }else{
-    selectedId=null; highlight(null);
-  }
-  updateScaleTargets();
-  updateLabelVisibility();
+  if (!hit || !hit.object.userData.isNode) { clearSelection(); return; }
+
+  const id = hit.object.userData.id;
+  if (id === selectedId) clearSelection();
+  else                   selectNode(id);
 });
 
 window.addEventListener('pointerup', () => {
