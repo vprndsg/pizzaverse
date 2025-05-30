@@ -60,6 +60,10 @@ let dragPlane    = null;
 let strongMap = {};
 const visibleSet    = new Set();
 
+let pointerDownPos = null;
+let pointerDownOnEmpty = false;
+let pointerDragged = false;
+
 const clusterLabels = [];
 const pickables = [];
 
@@ -271,28 +275,31 @@ function applySelection () {
   const connected = new Set();
   if (selectedId) neighbors[selectedId].forEach(id => connected.add(id));
 
+  const showAll = showAllToggle && showAllToggle.checked;
+
   // nodes
   nodeGroup.children.forEach(m => {
     const id   = m.userData.id;
     const L    = nodes[nodeIndex[id]].layer;
-    const seen = !selectedId || id === selectedId || connected.has(id);
+    const seen = selectedId && (id === selectedId || connected.has(id));
 
     m.material.transparent = true;
-    m.material.opacity     = seen ? 1 : 0.15;
-    m.visible              = seen || (showAllToggle && showAllToggle.checked) || L === activeLayer;
+    m.material.opacity     = selectedId ? (seen ? 1 : 0.15) : 1;
+    m.visible              = selectedId ? seen : (showAll || L === activeLayer);
 
-    if (m.glowSprite) m.glowSprite.material.opacity = seen ? 1 : 0.05;
+    if (m.glowSprite) m.glowSprite.material.opacity = selectedId ? (seen ? 1 : 0.05) : 1;
   });
 
   // links
   lineGroup.children.forEach((ln, i) => {
     const { source, target } = links[i];
-    const A = nodes[source].id, B = nodes[target].id;
-    const seen = !selectedId || A === selectedId || B === selectedId;
+    const LA = nodes[source].layer, LB = nodes[target].layer;
+    const baseVisible = showAll || (LA === activeLayer || LB === activeLayer);
+    const seen = selectedId && (nodes[source].id === selectedId || nodes[target].id === selectedId);
 
-    ln.visible           = seen;
-    ln.material.opacity  = seen ? 1 : 0.15;
-    ln.material.color.set(seen ? 0xffff00 : 0x8844ff);   // yellow focus lines
+    ln.visible           = selectedId ? seen : baseVisible;
+    ln.material.opacity  = selectedId && !seen ? 0.15 : ln.material.opacity;
+    ln.material.color.set(seen ? 0xffff00 : 0x8844ff);
   });
 
   refreshLabels();
@@ -321,6 +328,11 @@ function updateScaleTargets(){
   });
 }
 renderer.domElement.addEventListener('pointermove',e=>{
+  if (pointerDownPos) {
+    const dx = e.clientX - pointerDownPos.x;
+    const dy = e.clientY - pointerDownPos.y;
+    if (Math.hypot(dx, dy) > 4) pointerDragged = true;
+  }
   if (draggingNode) {
     const point = projectPointerToPlane(e, renderer, camera, dragPlane);
     draggingNode.position.copy(point);
@@ -377,13 +389,16 @@ function clearSelection () {
   applySelection();
 }
 renderer.domElement.addEventListener('pointerdown', e => {
+  pointerDownPos = { x: e.clientX, y: e.clientY };
+  pointerDragged = false;
   const r = renderer.domElement.getBoundingClientRect();
   mouse.x = ((e.clientX - r.left) / r.width) * 2 - 1;
   mouse.y = -((e.clientY - r.top) / r.height) * 2 + 1;
   ray.setFromCamera(mouse, camera);
 
   const hit = ray.intersectObjects(pickables, false)[0];
-  if (!hit || !hit.object.userData.isNode) { clearSelection(); return; }
+  pointerDownOnEmpty = !(hit && hit.object.userData.isNode);
+  if (pointerDownOnEmpty) return;
 
   const id = hit.object.userData.id;
   if (id === selectedId) clearSelection();
@@ -396,6 +411,10 @@ window.addEventListener('pointerup', () => {
     draggingNode = null;
     controls.enabled = true;
   }
+  if (pointerDownPos && pointerDownOnEmpty && !pointerDragged) {
+    clearSelection();
+  }
+  pointerDownPos = null;
 });
 
 const {linkK, linkLen, repulsionK:repK, centerPull:centerK} = TUNED_PHYS;
