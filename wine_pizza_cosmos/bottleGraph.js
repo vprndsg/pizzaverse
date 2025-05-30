@@ -10,11 +10,13 @@ const svg = d3.select("body")
   .style("background", "#111");
 
 Promise.all([
-  fetch('bottle_nodes.json').then(r => r.json()),
-  fetch('bottle_links.json').then(r => r.json())
-]).then(([nodes, links]) => {
-  init(nodes, links);
-});
+  fetch('./bottle_nodes.json').then(r => r.json()),
+  fetch('./bottle_links.json').then(r => r.json())
+])
+  .then(([nodes, links]) => {
+    init(nodes, links);
+  })
+  .catch(console.error);
 
 function init(allNodes, allLinks) {
   let mainNodes = allNodes.filter(n => n.type !== 'bottle');

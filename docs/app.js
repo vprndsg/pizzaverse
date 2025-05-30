@@ -446,10 +446,10 @@ function animate(){
 }
 
 Promise.all([
-  fetch('nodes.json').then(r=>r.json()),
-  fetch('links.json').then(r=>r.json()),
-  fetch('bottle_nodes.json').then(r=>r.json()),
-  fetch('bottle_links.json').then(r=>r.json())
+  fetch('./nodes.json').then(r=>r.json()),
+  fetch('./links.json').then(r=>r.json()),
+  fetch('./bottle_nodes.json').then(r=>r.json()),
+  fetch('./bottle_links.json').then(r=>r.json())
 ])
   .then(([baseNodes, baseLinks, bottleNodes, bottleLinks]) => {
     const labelToId = {};
@@ -476,7 +476,8 @@ Promise.all([
       target: idMap[l.target]
     }));
     buildGraph(baseNodes.concat(extraNodes), baseLinks.concat(mappedLinks));
-  });
+  })
+  .catch(console.error);
 
 window.addEventListener('resize',()=>{
   camera.aspect=window.innerWidth/window.innerHeight;
