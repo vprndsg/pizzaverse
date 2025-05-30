@@ -35,16 +35,10 @@
   <div id="legend" style="position:fixed;bottom:10px;left:10px;background:rgba(0,0,0,0.5);color:#fff;padding:8px;font:14px sans-serif;border-radius:4px;">
     <div><span class="legend-dot" style="background:#8B0038"></span> Wine Node</div>
     <div><span class="legend-dot" style="background:#EFBF4C"></span> Pizza Node</div>
-    div style="margin-top:4px;font-size:12px;">Scroll to zoom, drag to rotate. Click nodes for links.</div>
-  <<script type="importmap">
-{
-  "imports": {
-    "three": "https://unpkg.com/three@0.153.0/build/three.module.js"
-  }
-</script>
-</div>
-  
-  <<script type="module" src="https://unpkg.com/three@0.153.0/examples/jsm/renderers/CSS2DRenderer.js?module"></script>
+    <div style="margin-top:4px;font-size:12px;">Scroll to zoom, drag to rotate. Click nodes for links.</div>
+  </div>
+
+  <script type="module" src="https://unpkg.com/three@0.153.0/examples/jsm/renderers/CSS2DRenderer.js"></script>
   <script type="module" src="./app.js"></script>
   <style>
     .legend-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;}

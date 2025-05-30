@@ -1,6 +1,7 @@
 /* helpers/dragPhysics.js
  * Minimal utilities for node-dragging & tuned spring physics.
  */
+import * as THREE from "https://unpkg.com/three@0.153.0/build/three.module.js?module";
 export function planeFromCamera(camera) {
   // Infinite plane through controls.target, facing camera
   const normal = new THREE.Vector3().subVectors(camera.position, camera.target).normalize();
