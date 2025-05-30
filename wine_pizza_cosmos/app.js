@@ -118,9 +118,9 @@ function buildGraph(rawNodes, rawLinks){
   pickables.length = 0;
 
   nodes.forEach(n=>{
-    const material = (n.category==='wine'?matWine:matPizza);
-    const geometry = n.category==='wine' ? sphereGeo : diskGeo;
-    const mesh=new THREE.Mesh(geometry,material);
+    const baseMat = n.category === 'wine' ? matWine : matPizza;
+    const geometry = n.category === 'wine' ? sphereGeo : diskGeo;
+    const mesh = new THREE.Mesh(geometry, baseMat.clone());
     mesh.position.set(n.x,n.y,n.z);
     mesh.userData.id=n.id;
     mesh.userData.isNode = true;
