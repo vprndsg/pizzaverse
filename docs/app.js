@@ -446,10 +446,10 @@ function animate(){
 }
 
 Promise.all([
-  fetch('nodes.json').then(r=>r.json()),
-  fetch('links.json').then(r=>r.json()),
-  fetch('bottle_nodes.json').then(r=>r.json()),
-  fetch('bottle_links.json').then(r=>r.json())
+  fetch('./nodes.json').then(r=>r.json()),
+  fetch('./links.json').then(r=>r.json()),
+  fetch('./bottle_nodes.json').then(r=>r.json()),
+  fetch('./bottle_links.json').then(r=>r.json())
 ])
   .then(([baseNodes, baseLinks, bottleNodes, bottleLinks]) => {
     const labelToId = {};
