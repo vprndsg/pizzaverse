@@ -22,8 +22,8 @@ export function projectPointerToPlane(event, renderer, camera, plane) {
 }
 
 export const TUNED_PHYS = {
-  linkK:        0.25,  // stronger springs for tighter clusters
-  linkLen:      30,    // nodes rest closer together
-  repulsionK:   15,    // weaker repulsion so groups stay compact
+  linkK:        0.12,  // stiffer springs
+  linkLen:      35,    // shorter resting distance
+  repulsionK:   25,    // weaker repulsion so clusters come closer
   centerPull:   0.05   // gentle centering
 };
