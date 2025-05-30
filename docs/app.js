@@ -60,6 +60,10 @@ let dragPlane    = null;
 let strongMap = {};
 const visibleSet    = new Set();
 
+let pointerDownPos = null;
+let pointerDownOnEmpty = false;
+let pointerDragged = false;
+
 const clusterLabels = [];
 const pickables = [];
 
@@ -320,6 +324,11 @@ function updateScaleTargets(){
   });
 }
 renderer.domElement.addEventListener('pointermove',e=>{
+  if (pointerDownPos) {
+    const dx = e.clientX - pointerDownPos.x;
+    const dy = e.clientY - pointerDownPos.y;
+    if (Math.hypot(dx, dy) > 4) pointerDragged = true;
+  }
   if (draggingNode) {
     const point = projectPointerToPlane(e, renderer, camera, dragPlane);
     draggingNode.position.copy(point);
@@ -376,13 +385,16 @@ function clearSelection () {
   applySelection();
 }
 renderer.domElement.addEventListener('pointerdown', e => {
+  pointerDownPos = { x: e.clientX, y: e.clientY };
+  pointerDragged = false;
   const r = renderer.domElement.getBoundingClientRect();
   mouse.x = ((e.clientX - r.left) / r.width) * 2 - 1;
   mouse.y = -((e.clientY - r.top) / r.height) * 2 + 1;
   ray.setFromCamera(mouse, camera);
 
   const hit = ray.intersectObjects(pickables, false)[0];
-  if (!hit || !hit.object.userData.isNode) { clearSelection(); return; }
+  pointerDownOnEmpty = !(hit && hit.object.userData.isNode);
+  if (pointerDownOnEmpty) return;
 
   const id = hit.object.userData.id;
   if (id === selectedId) clearSelection();
@@ -395,6 +407,10 @@ window.addEventListener('pointerup', () => {
     draggingNode = null;
     controls.enabled = true;
   }
+  if (pointerDownPos && pointerDownOnEmpty && !pointerDragged) {
+    clearSelection();
+  }
+  pointerDownPos = null;
 });
 
 const {linkK, linkLen, repulsionK:repK, centerPull:centerK} = TUNED_PHYS;
