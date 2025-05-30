@@ -9,6 +9,8 @@ import {
   TUNED_PHYS
 } from './helpers/dragPhysics.js';
 
+const BOTTLE_LAYER = 6;
+
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
 camera.position.set(0, 0, 120);
@@ -84,7 +86,7 @@ function makeLabel(txt, color = '#fff', size = 12) {
 function buildGraph(rawNodes, rawLinks){
   nodes = rawNodes.map(n => ({
     ...n,
-    category: n.layer <= 3 ? 'wine' : 'pizza',
+    category: n.layer <= 3 || n.layer === BOTTLE_LAYER ? 'wine' : 'pizza',
     x:(Math.random()-0.5)*100,
     y:(Math.random()-0.5)*100,
     z:(Math.random()-0.5)*100,
@@ -443,8 +445,38 @@ function animate(){
   labelRenderer.render(scene,camera);
 }
 
-Promise.all([fetch('nodes.json').then(r=>r.json()), fetch('links.json').then(r=>r.json())])
-  .then(([n,l])=>buildGraph(n,l));
+Promise.all([
+  fetch('nodes.json').then(r=>r.json()),
+  fetch('links.json').then(r=>r.json()),
+  fetch('bottle_nodes.json').then(r=>r.json()),
+  fetch('bottle_links.json').then(r=>r.json())
+])
+  .then(([baseNodes, baseLinks, bottleNodes, bottleLinks]) => {
+    const labelToId = {};
+    baseNodes.forEach(n => { labelToId[n.label] = n.id; });
+    const layerMap = { varietal: 0, region: 2, pizzaStyle: 4, topping: 5 };
+    const idMap = {};
+    const extraNodes = [];
+    bottleNodes.forEach(n => {
+      if (n.type === 'bottle') {
+        idMap[n.id] = n.id;
+        extraNodes.push({ id: n.id, label: n.name, layer: BOTTLE_LAYER });
+      } else {
+        const existing = labelToId[n.name];
+        if (existing != null) {
+          idMap[n.id] = existing;
+        } else {
+          idMap[n.id] = n.id;
+          extraNodes.push({ id: n.id, label: n.name, layer: layerMap[n.type] });
+        }
+      }
+    });
+    const mappedLinks = bottleLinks.map(l => ({
+      source: idMap[l.source],
+      target: idMap[l.target]
+    }));
+    buildGraph(baseNodes.concat(extraNodes), baseLinks.concat(mappedLinks));
+  });
 
 window.addEventListener('resize',()=>{
   camera.aspect=window.innerWidth/window.innerHeight;
