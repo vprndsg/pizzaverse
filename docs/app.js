@@ -402,8 +402,21 @@ renderer.domElement.addEventListener('pointerdown', e => {
   if (pointerDownOnEmpty) return;
 
   const id = hit.object.userData.id;
+  if (id !== selectedId) selectNode(id);
+});
+
+renderer.domElement.addEventListener('dblclick', e => {
+  const r = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+  mouse.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+  ray.setFromCamera(mouse, camera);
+
+  const visiblePickables = pickables.filter(obj => obj.visible);
+  const hit = ray.intersectObjects(visiblePickables, false)[0];
+  if (!hit || !hit.object.userData.isNode) return;
+
+  const id = hit.object.userData.id;
   if (id === selectedId) clearSelection();
-  else                   selectNode(id);
 });
 
 window.addEventListener('pointerup', () => {
