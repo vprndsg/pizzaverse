@@ -8,7 +8,7 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "eslint \"{docs,wine_pizza_cosmos}/**/*.js\""
+    "lint": "eslint \"docs/**/*.js\""
   },
   "keywords": [],
   "author": "",
