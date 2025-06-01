@@ -55,6 +55,13 @@ let counts = {};
 let targets = [];
 let animStart = 0;
 let animating = false;
+let flyStart = 0;
+let flyDuration = 1000; // ms
+let flying = false;
+const flyFromPos = new THREE.Vector3();
+const flyToPos = new THREE.Vector3();
+const flyFromTarget = new THREE.Vector3();
+const flyToTarget = new THREE.Vector3();
 let draggingNode = null;
 let dragPlane    = null;
 let strongMap = {};
@@ -376,9 +383,8 @@ function selectNode (id) {
     }
   });
 
-  // centre the orbit-controls target so the camera keeps circling the node
-  controls.target.copy(nodes[nodeIndex[id]]);
-  controls.update();
+  // smoothly move the camera toward the node
+  startFlyTo(nodes[nodeIndex[id]]);
 
   applySelection();
 }
@@ -505,6 +511,27 @@ function updateAnimation(){
   if(ease>=1) animating=false;
 }
 
+function startFlyTo(target){
+  flyFromPos.copy(camera.position);
+  flyFromTarget.copy(controls.target);
+  const offset = camera.position.clone().sub(controls.target);
+  flyToTarget.copy(target);
+  flyToPos.copy(target).add(offset);
+  flyStart = performance.now();
+  flying = true;
+}
+
+function updateFly(){
+  if(!flying) return;
+  const t = (performance.now() - flyStart) / flyDuration;
+  const ease = t <= 0 ? 0 : t >= 1 ? 1 : t*t*(3 - 2*t); // smoothstep
+  camera.position.lerpVectors(flyFromPos, flyToPos, ease);
+  controls.target.lerpVectors(flyFromTarget, flyToTarget, ease);
+  if(t >= 1){
+    flying = false;
+  }
+}
+
 function updateLabelVisibility(){
   const dist = camera.position.distanceTo(controls.target);
   const t = dist <= fadeInEnd ? 1 : dist >= fadeOutStart ? 0 : 1 - (dist - fadeInStart)/(fadeOutStart - fadeInStart);
@@ -535,6 +562,7 @@ function animate(){
   requestAnimationFrame(animate);
   physics();
   updateAnimation();
+  updateFly();
   updateClusterLabelPositions();
   updateLabelVisibility();
   const dt = clock.getDelta();
