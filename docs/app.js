@@ -3,11 +3,7 @@ import { OrbitControls } from "https://unpkg.com/three@0.153.0/examples/jsm/cont
 import { CSS2DRenderer, CSS2DObject } from "https://unpkg.com/three@0.153.0/examples/jsm/renderers/CSS2DRenderer.js?module";
 import { layerNames } from "./layers.js";
 import { initNodeAnimationProps, setNodeScaleTarget, updateNodeScale } from "./interaction.js";
-import {
-  planeFromCamera,
-  projectPointerToPlane,
-  TUNED_PHYS
-} from './helpers/dragPhysics.js';
+import { TUNED_PHYS } from './helpers/dragPhysics.js';
 import { createFluidBackground } from './helpers/fluidBackground.js';
 
 // Heavier mass for general concepts and soft gravity toward them.
@@ -73,8 +69,6 @@ const flyFromPos = new THREE.Vector3();
 const flyToPos = new THREE.Vector3();
 const flyFromTarget = new THREE.Vector3();
 const flyToTarget = new THREE.Vector3();
-let draggingNode = null;
-let dragPlane    = null;
 let strongMap = {};
 const visibleSet    = new Set();
 
@@ -357,14 +351,6 @@ renderer.domElement.addEventListener('pointermove',e=>{
     const dy = e.clientY - pointerDownPos.y;
     if (Math.hypot(dx, dy) > 4) pointerDragged = true;
   }
-  if (draggingNode) {
-    const point = projectPointerToPlane(e, renderer, camera, dragPlane);
-    draggingNode.position.copy(point);
-    const nData = nodes[nodeIndex[draggingNode.userData.id]];
-    nData.x = point.x; nData.y = point.y; nData.z = point.z;
-    nData.vx = nData.vy = nData.vz = 0;
-    return;
-  }
 
   const r=renderer.domElement.getBoundingClientRect();
   mouse.x=((e.clientX-r.left)/r.width)*2-1;
@@ -444,11 +430,6 @@ renderer.domElement.addEventListener('dblclick', e => {
 });
 
 window.addEventListener('pointerup', () => {
-  if (draggingNode) {
-    setNodeScaleTarget(draggingNode, 1.2);
-    draggingNode = null;
-    controls.enabled = true;
-  }
   if (pointerDownPos && pointerDownOnEmpty && !pointerDragged) {
     clearSelection();
   }
