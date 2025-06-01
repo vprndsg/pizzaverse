@@ -14,7 +14,7 @@
   </style>
 </head>
 <body>
-  <input id="layerSlider" type="range" min="0" max="5" step="1" value="0" list="layerTicks"
+  <input id="layerSlider" type="range" min="0" max="6" step="1" value="0" list="layerTicks"
          style="position:fixed;bottom:12px;left:10%;width:80%;
                 accent-color:#ff008c;" />
   <datalist id="layerTicks">
@@ -24,6 +24,7 @@
     <option value="3" label="State / AVA"></option>
     <option value="4" label="Pizza Style"></option>
     <option value="5" label="Topping"></option>
+    <option value="6" label="Producer"></option>
   </datalist>
   <div id="layerLabel"
        style="position:fixed;right:16px;top:8px;
@@ -34,6 +35,7 @@
   <div id="legend" style="position:fixed;bottom:10px;left:10px;background:rgba(0,0,0,0.5);color:#fff;padding:8px;font:14px sans-serif;border-radius:4px;">
     <div><span class="legend-dot" style="background:#8B0038"></span> Wine Node</div>
     <div><span class="legend-dot" style="background:#EFBF4C"></span> Pizza Node</div>
+    <div><span class="legend-dot" style="background:#4C6FEF"></span> Producer Node</div>
     <div style="margin-top:4px;font-size:12px;">Scroll to zoom, drag to rotate. Click nodes for links.</div>
   </div>
   <script type="module" src="https://unpkg.com/three@0.153.0/examples/jsm/renderers/CSS2DRenderer.js"></script>
