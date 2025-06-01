@@ -3,11 +3,7 @@ import { OrbitControls } from "https://unpkg.com/three@0.153.0/examples/jsm/cont
 import { CSS2DRenderer, CSS2DObject } from "https://unpkg.com/three@0.153.0/examples/jsm/renderers/CSS2DRenderer.js?module";
 import { layerNames } from "./layers.js";
 import { initNodeAnimationProps, setNodeScaleTarget, updateNodeScale } from "./interaction.js";
-import {
-  planeFromCamera,
-  projectPointerToPlane,
-  TUNED_PHYS
-} from './helpers/dragPhysics.js';
+import { TUNED_PHYS } from './helpers/dragPhysics.js';
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
@@ -56,8 +52,6 @@ let counts = {};
 let targets = [];
 let animStart = 0;
 let animating = false;
-let draggingNode = null;
-let dragPlane    = null;
 let strongMap = {};
 const visibleSet    = new Set();
 
@@ -378,14 +372,6 @@ renderer.domElement.addEventListener('pointermove',e=>{
     const dy = e.clientY - pointerDownPos.y;
     if (Math.hypot(dx, dy) > 4) pointerDragged = true;
   }
-  if (draggingNode) {
-    const point = projectPointerToPlane(e, renderer, camera, dragPlane);
-    draggingNode.position.copy(point);
-    const nData = nodes[nodeIndex[draggingNode.userData.id]];
-    nData.x = point.x; nData.y = point.y; nData.z = point.z;
-    nData.vx = nData.vy = nData.vz = 0;
-    return;
-  }
 
   const r=renderer.domElement.getBoundingClientRect();
   mouse.x=((e.clientX-r.left)/r.width)*2-1;
@@ -453,11 +439,6 @@ renderer.domElement.addEventListener('pointerdown', e => {
 });
 
 window.addEventListener('pointerup', () => {
-  if (draggingNode) {
-    setNodeScaleTarget(draggingNode, 1.2);
-    draggingNode = null;
-    controls.enabled = true;
-  }
   if (pointerDownPos && pointerDownOnEmpty && !pointerDragged) {
     clearSelection();
   }
@@ -576,7 +557,7 @@ function updateLabelVisibility(){
     const el = n.labelObj.element;
 
     const isSelectedOrNeighbor = visibleSet.has(n.id);
-    const isHovered = !draggingNode && currentHover && currentHover.userData.id === n.id;
+    const isHovered = currentHover && currentHover.userData.id === n.id;
     const isActiveImportant = n.layer === activeLayer && n.isImportant;
 
     if (isSelectedOrNeighbor || isHovered || isActiveImportant) {
