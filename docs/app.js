@@ -75,7 +75,6 @@ const flyFromTarget = new THREE.Vector3();
 const flyToTarget = new THREE.Vector3();
 let draggingNode = null;
 let dragPlane    = null;
-let strongMap = {};
 const visibleSet    = new Set();
 
 let pointerDownPos = null;
@@ -121,15 +120,9 @@ function buildGraph(rawNodes, rawLinks){
   links = rawLinks.map(l=>({source:nodeIndex[l.source],target:nodeIndex[l.target],strength:l.strength}));
   neighbors = {};
   nodes.forEach(n=>neighbors[n.id]=[]);
-  strongMap={};
   links.forEach(l=>{
     neighbors[nodes[l.source].id].push(nodes[l.target].id);
     neighbors[nodes[l.target].id].push(nodes[l.source].id);
-    if(l.strength>0.8){
-      const a=nodes[l.source].id,b=nodes[l.target].id;
-      if(!strongMap[a])strongMap[a]=[]; if(!strongMap[b])strongMap[b]=[];
-      strongMap[a].push(b); strongMap[b].push(a);
-    }
   });
 
   counts=getCookieCounts();
