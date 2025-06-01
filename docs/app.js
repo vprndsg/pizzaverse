@@ -96,7 +96,7 @@ function makeLabel(txt, color = '#fff', size = 12) {
 function buildGraph(rawNodes, rawLinks){
   nodes = rawNodes.map(n => ({
     ...n,
-    category: n.layer <= 3 ? 'wine' : 'pizza',
+    category: n.layer <= 3 ? 'wine' : n.layer <=5 ? 'pizza' : 'producer',
     x:(Math.random()-0.5)*100,
     y:(Math.random()-0.5)*100,
     z:(Math.random()-0.5)*100,
@@ -130,8 +130,8 @@ function buildGraph(rawNodes, rawLinks){
 
   nodes.forEach(n=>{
     n.isImportant = neighbors[n.id].length >= threshold;
-    const baseMat = n.category === 'wine' ? matWine : matPizza;
-    const geometry = n.category === 'wine' ? sphereGeo : diskGeo;
+    const baseMat = n.category === 'wine' ? matWine : n.category === 'pizza' ? matPizza : matProducer;
+    const geometry = n.category === 'pizza' ? diskGeo : sphereGeo;
     const mesh = new THREE.Mesh(geometry, baseMat.clone());
     mesh.position.set(n.x,n.y,n.z);
     mesh.userData.id=n.id;
@@ -146,7 +146,10 @@ function buildGraph(rawNodes, rawLinks){
     n.labelObj = lbl;
     if(neighbors[n.id].length>=threshold){
       const glow=new THREE.Sprite(spriteMat.clone());
-      glow.material.color.set(n.category==='wine'?wineColor:pizzaColor);
+      glow.material.color.set(
+        n.category==='wine'?wineColor:
+        n.category==='pizza'?pizzaColor:producerColor
+      );
       const base=8*(1+0.3*(neighbors[n.id].length-1));
       glow.scale.set(base,base,1);
       n.glowSprite=glow; n.glowBaseScale=base;
@@ -180,8 +183,10 @@ scene.add(nodeGroup); scene.add(lineGroup);
 
 const wineColor=new THREE.Color(0x8B0038);
 const pizzaColor=new THREE.Color(0xEFBF4C);
+const producerColor=new THREE.Color(0x4C6FEF);
 const matWine  = new THREE.MeshPhongMaterial({ color:wineColor,  transparent:true });
 const matPizza = new THREE.MeshPhongMaterial({ color:pizzaColor, transparent:true });
+const matProducer = new THREE.MeshPhongMaterial({ color:producerColor, transparent:true });
 const sphereGeo=new THREE.SphereGeometry(2.5,16,16);
 sphereGeo.computeBoundingSphere();
 sphereGeo.boundingSphere.radius*=1.4;

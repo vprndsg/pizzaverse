@@ -748,5 +748,10 @@
         "id": 150,
         "label": "Clams",
         "layer": 5
+    },
+    {
+        "id": 151,
+        "label": "Test Cellars",
+        "layer": 6
     }
 ]
