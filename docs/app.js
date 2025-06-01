@@ -528,8 +528,7 @@ function physics(){
   nodes.forEach(n=>{
     n.vx=(n.vx+n.fx/n.mass)*damp; n.vy=(n.vy+n.fy/n.mass)*damp; n.vz=(n.vz+n.fz/n.mass)*damp;
     n.x+=n.vx; n.y+=n.vy; n.z+=n.vz;
-    const obj=nodeGroup.children.find(o=>o.userData.id===n.id);
-    obj.position.set(n.x,n.y,n.z);
+    n.mesh.position.set(n.x, n.y, n.z);
   });
   lineGroup.children.forEach((l,i)=>{
     const pos=l.geometry.attributes.position.array;
