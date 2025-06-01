@@ -204,9 +204,11 @@ const spriteMat=new THREE.SpriteMaterial({map:glowTex,blending:THREE.AdditiveBle
 
 const threshold=2;
 const lineMat=new THREE.LineBasicMaterial({color:0x8844ff,transparent:true,opacity:0.8});
+
 const LINK_ACTIVATION_THRESHOLD = 0.6;
 const LINK_BASE_RADIUS = 60;
 const LINK_REMOVAL_FACTOR = 2.0;
+
 
 function activateLink(l) {
   if (l.active) return;
