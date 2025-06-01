@@ -1,3 +1,4 @@
+import * as THREE from "https://unpkg.com/three@0.153.0/build/three.module.js?module";
 /* helpers/dragPhysics.js
  * Minimal utilities for node-dragging & tuned spring physics.
  */
