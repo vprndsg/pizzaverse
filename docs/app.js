@@ -10,6 +10,11 @@ import {
 } from './helpers/dragPhysics.js';
 import { createFluidBackground } from './helpers/fluidBackground.js';
 
+// Heavier mass for general concepts and soft gravity toward them.
+const MASS_BY_LAYER = [5, 3, 2, 1.5, 1, 0.8];
+const GRAVITY_K = 0.05;
+const ANCHOR_K = 0.1;
+
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
 camera.position.set(0, 0, 120);
@@ -107,7 +112,7 @@ function buildGraph(rawNodes, rawLinks){
     y:(Math.random()-0.5)*100,
     z:(Math.random()-0.5)*100,
     vx:0,vy:0,vz:0,
-    mass:1,
+    mass:MASS_BY_LAYER[n.layer] ?? 1,
     glowSprite:null,
     glowBaseScale:1
   }));
@@ -128,7 +133,9 @@ function buildGraph(rawNodes, rawLinks){
   });
 
   counts=getCookieCounts();
-  for(const [id,c] of Object.entries(counts)){ if(nodeIndex[id]!=null) nodes[nodeIndex[id]].mass=1+c;}
+  for(const [id,c] of Object.entries(counts)){
+    if(nodeIndex[id]!=null) nodes[nodeIndex[id]].mass += c;
+  }
 
   nodeGroup.clear();
   lineGroup.clear();
@@ -450,6 +457,44 @@ window.addEventListener('pointerup', () => {
 
 const {linkK, linkLen, repulsionK:repK, centerPull:centerK} = TUNED_PHYS;
 const damp=0.85;
+function applyGravity(){
+  const generals = nodes.filter(n => n.layer <= 1);
+  generals.forEach(A => {
+    nodes.forEach(B => {
+      if(A===B) return;
+      let dx = A.x - B.x, dy = A.y - B.y, dz = A.z - B.z;
+      const d2 = dx*dx + dy*dy + dz*dz || 0.001;
+      const d = Math.sqrt(d2);
+      const f = GRAVITY_K * A.mass * B.mass / d2;
+      dx /= d; dy /= d; dz /= d;
+      B.fx += dx * f; B.fy += dy * f; B.fz += dz * f;
+      A.fx -= dx * f; A.fy -= dy * f; A.fz -= dz * f;
+    });
+  });
+}
+
+function applyAnchors(){
+  nodes.forEach((n,i)=>{
+    let best = null;
+    let bestScore = -Infinity;
+    (neighbors[n.id]||[]).forEach(id=>{
+      const j = nodeIndex[id];
+      const m = nodes[j];
+      let dx=m.x-n.x, dy=m.y-n.y, dz=m.z-n.z;
+      const dist=Math.hypot(dx,dy,dz)||0.001;
+      const link = links.find(l=>(l.source===i&&l.target===j)||(l.source===j&&l.target===i));
+      const strength=link?link.strength:0;
+      const score=strength/dist;
+      if(score>bestScore){bestScore=score;best={dx,dy,dz};}
+    });
+    if(best){
+      n.fx += best.dx*ANCHOR_K;
+      n.fy += best.dy*ANCHOR_K;
+      n.fz += best.dz*ANCHOR_K;
+    }
+  });
+}
+
 function physics(){
   nodes.forEach(n=>{n.fx=n.fy=n.fz=0;});
   links.forEach(l=>{
@@ -477,6 +522,8 @@ function physics(){
     A.fx -= dx*f; A.fy -= dy*f; A.fz -= dz*f; 
     B.fx += dx*f; B.fy += dy*f; B.fz += dz*f;
   }
+  applyGravity();
+  applyAnchors();
   nodes.forEach(n=>{ n.fx+=-centerK*n.x; n.fy+=-centerK*n.y; n.fz+=-centerK*n.z;});
   nodes.forEach(n=>{
     n.vx=(n.vx+n.fx/n.mass)*damp; n.vy=(n.vy+n.fy/n.mass)*damp; n.vz=(n.vz+n.fz/n.mass)*damp;
