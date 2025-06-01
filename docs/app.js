@@ -76,6 +76,7 @@ const flyFromTarget = new THREE.Vector3();
 const flyToTarget = new THREE.Vector3();
 let draggingNode = null;
 let dragPlane    = null;
+let strongMap = {};
 const visibleSet    = new Set();
 
 let pointerDownPos = null;
