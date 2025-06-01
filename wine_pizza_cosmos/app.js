@@ -8,12 +8,6 @@ import {
   projectPointerToPlane,
   TUNED_PHYS
 } from './helpers/dragPhysics.js';
-import { createFluidBackground } from './helpers/fluidBackground.js';
-
-// Heavier mass for general concepts and soft gravity toward them.
-const MASS_BY_LAYER = [5, 3, 2, 1.5, 1, 0.8];
-const GRAVITY_K = 0.05;
-const ANCHOR_K = 0.1;
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
@@ -22,12 +16,7 @@ camera.position.set(0, 0, 120);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio || 1);
-renderer.autoClear = false;
 document.body.appendChild(renderer.domElement);
-
-const bgScene = new THREE.Scene();
-const bgCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-const fluidMesh = createFluidBackground(bgScene);
 
 const labelRenderer = new CSS2DRenderer();
 labelRenderer.setSize(window.innerWidth, window.innerHeight);
@@ -67,15 +56,9 @@ let counts = {};
 let targets = [];
 let animStart = 0;
 let animating = false;
-let flyStart = 0;
-let flyDuration = 1000; // ms
-let flying = false;
-const flyFromPos = new THREE.Vector3();
-const flyToPos = new THREE.Vector3();
-const flyFromTarget = new THREE.Vector3();
-const flyToTarget = new THREE.Vector3();
 let draggingNode = null;
 let dragPlane    = null;
+let strongMap = {};
 const visibleSet    = new Set();
 
 let pointerDownPos = null;
@@ -107,12 +90,12 @@ function makeLabel(txt, color = '#fff', size = 12) {
 function buildGraph(rawNodes, rawLinks){
   nodes = rawNodes.map(n => ({
     ...n,
-    category: n.layer <= 3 ? 'wine' : n.layer <=5 ? 'pizza' : 'producer',
+    category: n.layer <= 3 ? 'wine' : 'pizza',
     x:(Math.random()-0.5)*100,
     y:(Math.random()-0.5)*100,
     z:(Math.random()-0.5)*100,
     vx:0,vy:0,vz:0,
-    mass:MASS_BY_LAYER[n.layer] ?? 1,
+    mass:1,
     glowSprite:null,
     glowBaseScale:1
   }));
@@ -147,18 +130,15 @@ function buildGraph(rawNodes, rawLinks){
   });
 
   counts=getCookieCounts();
-  for(const [id,c] of Object.entries(counts)){
-    if(nodeIndex[id]!=null) nodes[nodeIndex[id]].mass += c;
-  }
+  for(const [id,c] of Object.entries(counts)){ if(nodeIndex[id]!=null) nodes[nodeIndex[id]].mass=1+c;}
 
   nodeGroup.clear();
   lineGroup.clear();
   pickables.length = 0;
 
   nodes.forEach(n=>{
-    n.isImportant = neighbors[n.id].length >= threshold;
-    const baseMat = n.category === 'wine' ? matWine : n.category === 'pizza' ? matPizza : matProducer;
-    const geometry = n.category === 'pizza' ? diskGeo : sphereGeo;
+    const baseMat = n.category === 'wine' ? matWine : matPizza;
+    const geometry = n.category === 'wine' ? sphereGeo : diskGeo;
     const mesh = new THREE.Mesh(geometry, baseMat.clone());
     mesh.position.set(n.x,n.y,n.z);
     mesh.userData.id=n.id;
@@ -168,15 +148,12 @@ function buildGraph(rawNodes, rawLinks){
     pickables.push(mesh);
     n.mesh = mesh;
     const lbl = makeLabel(n.label, '#fff', 11);
-    if(!n.isImportant) lbl.element.style.opacity = '0';
+    lbl.element.style.opacity = '0';
     mesh.add(lbl);
     n.labelObj = lbl;
     if(neighbors[n.id].length>=threshold){
       const glow=new THREE.Sprite(spriteMat.clone());
-      glow.material.color.set(
-        n.category==='wine'?wineColor:
-        n.category==='pizza'?pizzaColor:producerColor
-      );
+      glow.material.color.set(n.category==='wine'?wineColor:pizzaColor);
       const base=8*(1+0.3*(neighbors[n.id].length-1));
       glow.scale.set(base,base,1);
       n.glowSprite=glow; n.glowBaseScale=base;
@@ -193,6 +170,7 @@ function buildGraph(rawNodes, rawLinks){
   });
 
   updateLayerVisibility();
+  refreshLabels();      // ensure no labels at start
   animate();
 }
 
@@ -210,10 +188,8 @@ scene.add(nodeGroup); scene.add(lineGroup);
 
 const wineColor=new THREE.Color(0x8B0038);
 const pizzaColor=new THREE.Color(0xEFBF4C);
-const producerColor=new THREE.Color(0x4C6FEF);
 const matWine  = new THREE.MeshPhongMaterial({ color:wineColor,  transparent:true });
 const matPizza = new THREE.MeshPhongMaterial({ color:pizzaColor, transparent:true });
-const matProducer = new THREE.MeshPhongMaterial({ color:producerColor, transparent:true });
 const sphereGeo=new THREE.SphereGeometry(2.5,16,16);
 sphereGeo.computeBoundingSphere();
 sphereGeo.boundingSphere.radius*=1.4;
@@ -334,6 +310,7 @@ function updateLayerVisibility() {
     line.visible = showAll || (LA === activeLayer || LB === activeLayer);
   });
   buildClusterLabels(activeLayer);
+  refreshLabels();
   updateLabelVisibility();
 }
 
@@ -443,8 +420,9 @@ function selectNode (id) {
     }
   });
 
-  // smoothly move the camera toward the node
-  startFlyTo(nodes[nodeIndex[id]]);
+  // centre the orbit-controls target so the camera keeps circling the node
+  controls.target.copy(nodes[nodeIndex[id]]);
+  controls.update();
 
   applySelection();
 }
@@ -468,21 +446,8 @@ renderer.domElement.addEventListener('pointerdown', e => {
   if (pointerDownOnEmpty) return;
 
   const id = hit.object.userData.id;
-  if (id !== selectedId) selectNode(id);
-});
-
-renderer.domElement.addEventListener('dblclick', e => {
-  const r = renderer.domElement.getBoundingClientRect();
-  mouse.x = ((e.clientX - r.left) / r.width) * 2 - 1;
-  mouse.y = -((e.clientY - r.top) / r.height) * 2 + 1;
-  ray.setFromCamera(mouse, camera);
-
-  const visiblePickables = pickables.filter(obj => obj.visible);
-  const hit = ray.intersectObjects(visiblePickables, false)[0];
-  if (!hit || !hit.object.userData.isNode) return;
-
-  const id = hit.object.userData.id;
   if (id === selectedId) clearSelection();
+  else                   selectNode(id);
 });
 
 window.addEventListener('pointerup', () => {
@@ -499,44 +464,6 @@ window.addEventListener('pointerup', () => {
 
 const {linkK, linkLen, repulsionK:repK, centerPull:centerK} = TUNED_PHYS;
 const damp=0.85;
-function applyGravity(){
-  const generals = nodes.filter(n => n.layer <= 1);
-  generals.forEach(A => {
-    nodes.forEach(B => {
-      if(A===B) return;
-      let dx = A.x - B.x, dy = A.y - B.y, dz = A.z - B.z;
-      const d2 = dx*dx + dy*dy + dz*dz || 0.001;
-      const d = Math.sqrt(d2);
-      const f = GRAVITY_K * A.mass * B.mass / d2;
-      dx /= d; dy /= d; dz /= d;
-      B.fx += dx * f; B.fy += dy * f; B.fz += dz * f;
-      A.fx -= dx * f; A.fy -= dy * f; A.fz -= dz * f;
-    });
-  });
-}
-
-function applyAnchors(){
-  nodes.forEach((n,i)=>{
-    let best = null;
-    let bestScore = -Infinity;
-    (neighbors[n.id]||[]).forEach(id=>{
-      const j = nodeIndex[id];
-      const m = nodes[j];
-      let dx=m.x-n.x, dy=m.y-n.y, dz=m.z-n.z;
-      const dist=Math.hypot(dx,dy,dz)||0.001;
-      const link = links.find(l=>(l.source===i&&l.target===j)||(l.source===j&&l.target===i));
-      const strength=link?link.strength:0;
-      const score=strength/dist;
-      if(score>bestScore){bestScore=score;best={dx,dy,dz};}
-    });
-    if(best){
-      n.fx += best.dx*ANCHOR_K;
-      n.fy += best.dy*ANCHOR_K;
-      n.fz += best.dz*ANCHOR_K;
-    }
-  });
-}
-
 function physics(){
   nodes.forEach(n=>{n.fx=n.fy=n.fz=0;});
 
@@ -584,8 +511,6 @@ function physics(){
     A.fx -= dx*f; A.fy -= dy*f; A.fz -= dz*f; 
     B.fx += dx*f; B.fy += dy*f; B.fz += dz*f;
   }
-  applyGravity();
-  applyAnchors();
   nodes.forEach(n=>{ n.fx+=-centerK*n.x; n.fy+=-centerK*n.y; n.fz+=-centerK*n.z;});
   nodes.forEach(n=>{
     n.vx=(n.vx+n.fx/n.mass)*damp; n.vy=(n.vy+n.fy/n.mass)*damp; n.vz=(n.vz+n.fz/n.mass)*damp;
@@ -631,59 +556,38 @@ function updateAnimation(){
   if(ease>=1) animating=false;
 }
 
-function startFlyTo(target){
-  flyFromPos.copy(camera.position);
-  flyFromTarget.copy(controls.target);
-  const offset = camera.position.clone().sub(controls.target);
-  flyToTarget.copy(target);
-  flyToPos.copy(target).add(offset);
-  flyStart = performance.now();
-  flying = true;
-}
-
-function updateFly(){
-  if(!flying) return;
-  const t = (performance.now() - flyStart) / flyDuration;
-  const ease = t <= 0 ? 0 : t >= 1 ? 1 : t*t*(3 - 2*t); // smoothstep
-  camera.position.lerpVectors(flyFromPos, flyToPos, ease);
-  controls.target.lerpVectors(flyFromTarget, flyToTarget, ease);
-  if(t >= 1){
-    flying = false;
-  }
-}
-
 function updateLabelVisibility(){
   const dist = camera.position.distanceTo(controls.target);
-  const t = dist <= fadeInEnd ? 1 : dist >= fadeOutStart ? 0 : 1 - (dist - fadeInStart)/(fadeOutStart - fadeInStart);
+
+  const zoomFactor = dist <= fadeInEnd ? 1 : dist >= fadeOutStart ? 0 :
+                     1 - (dist - fadeInStart) / (fadeOutStart - fadeInStart);
 
   clusterLabels.forEach(o => {
-    let op = 0;
+    let opacity = 0;
     if(dist > fadeOutStart){
-      op = Math.min((dist - fadeOutStart)/(fadeOutEnd - fadeOutStart),1);
+      opacity = Math.min((dist - fadeOutStart)/(fadeOutEnd - fadeOutStart), 1);
     }
-    o.element.style.opacity = op;
+    o.element.style.opacity = opacity;
   });
 
   nodes.forEach(n => {
     const el = n.labelObj.element;
-    const isSelected = selectedId && selectedId === n.id;
-    const isNeighbor = selectedId && (neighbors[selectedId] || []).includes(n.id);
-    const isHover = currentHover && currentHover.userData.id === n.id;
-    const isActiveImportant = n.layer === activeLayer && n.isImportant;
-    const show = isSelected || isNeighbor || isHover || isActiveImportant;
-    el.style.opacity = show ? t : 0;
 
+    const isSelectedOrNeighbor = visibleSet.has(n.id);
+    const isHovered = !draggingNode && currentHover && currentHover.userData.id === n.id;
+    const isActiveImportant = n.layer === activeLayer && n.isImportant;
+
+    el.style.opacity = (isSelectedOrNeighbor || isHovered || isActiveImportant) ? zoomFactor : 0;
   });
+
   highlightLines();
 }
 const t0=performance.now();
 const clock = new THREE.Clock();
 function animate(){
   requestAnimationFrame(animate);
-  fluidMesh.material.uniforms.u_time.value = clock.getElapsedTime();
   physics();
   updateAnimation();
-  updateFly();
   updateClusterLabelPositions();
   updateLabelVisibility();
   const dt = clock.getDelta();
@@ -694,8 +598,6 @@ function animate(){
     if(n.glowSprite)n.glowSprite.scale.set(scale,scale,1);
   });
   controls.update();
-  renderer.clear();
-  renderer.render(bgScene,bgCamera);
   renderer.render(scene,camera);
   labelRenderer.render(scene,camera);
 }
@@ -705,7 +607,5 @@ Promise.all([fetch('nodes.json').then(r=>r.json()), fetch('links.json').then(r=>
 
 window.addEventListener('resize',()=>{
   camera.aspect=window.innerWidth/window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth,window.innerHeight);
-  labelRenderer.setSize(window.innerWidth,window.innerHeight);
+  camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth,window.innerHeight);
 });
