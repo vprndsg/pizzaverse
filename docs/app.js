@@ -229,9 +229,12 @@ const spriteMat=new THREE.SpriteMaterial({map:glowTex,blending:THREE.AdditiveBle
 
 const threshold=2;
 const lineMat=new THREE.LineBasicMaterial({color:0x8844ff,transparent:true,opacity:0.8});
-const LINK_ACTIVATION_THRESHOLD = 0.8;
-const LINK_BASE_RADIUS = 40;
-const LINK_REMOVAL_FACTOR = 1.5;
+// Further relax the rules so even weaker bonds appear
+const LINK_ACTIVATION_THRESHOLD = 0.5;
+// Expand the activation radius a bit more
+const LINK_BASE_RADIUS = 70;
+// Links hold on slightly longer
+const LINK_REMOVAL_FACTOR = 2.5;
 
 function activateLink(l) {
   if (l.active) return;
