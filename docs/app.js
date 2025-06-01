@@ -8,6 +8,7 @@ import {
   projectPointerToPlane,
   TUNED_PHYS
 } from './helpers/dragPhysics.js';
+import { createFluidBackground } from './helpers/fluidBackground.js';
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
@@ -16,7 +17,12 @@ camera.position.set(0, 0, 120);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio || 1);
+renderer.autoClear = false;
 document.body.appendChild(renderer.domElement);
+
+const bgScene = new THREE.Scene();
+const bgCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+const fluidMesh = createFluidBackground(bgScene);
 
 const labelRenderer = new CSS2DRenderer();
 labelRenderer.setSize(window.innerWidth, window.innerHeight);
@@ -560,6 +566,7 @@ const t0=performance.now();
 const clock = new THREE.Clock();
 function animate(){
   requestAnimationFrame(animate);
+  fluidMesh.material.uniforms.u_time.value = clock.getElapsedTime();
   physics();
   updateAnimation();
   updateFly();
@@ -573,6 +580,8 @@ function animate(){
     if(n.glowSprite)n.glowSprite.scale.set(scale,scale,1);
   });
   controls.update();
+  renderer.clear();
+  renderer.render(bgScene,bgCamera);
   renderer.render(scene,camera);
   labelRenderer.render(scene,camera);
 }
@@ -582,5 +591,7 @@ Promise.all([fetch('nodes.json').then(r=>r.json()), fetch('links.json').then(r=>
 
 window.addEventListener('resize',()=>{
   camera.aspect=window.innerWidth/window.innerHeight;
-  camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth,window.innerHeight);
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth,window.innerHeight);
+  labelRenderer.setSize(window.innerWidth,window.innerHeight);
 });
