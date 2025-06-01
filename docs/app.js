@@ -61,6 +61,7 @@ controls.maxDistance = 500;
 let nodes = [];
 let nodeIndex = {};
 let links = [];
+let potentialLinks = [];
 let neighbors = {};
 let counts = {};
 let targets = [];
@@ -118,17 +119,31 @@ function buildGraph(rawNodes, rawLinks){
   }));
   nodeIndex = {};
   nodes.forEach((n,i)=>nodeIndex[n.id]=i);
-  links = rawLinks.map(l=>({source:nodeIndex[l.source],target:nodeIndex[l.target],strength:l.strength}));
+  potentialLinks = rawLinks.map(l => ({
+    source: nodeIndex[l.source],
+    target: nodeIndex[l.target],
+    strength: l.strength,
+    active: false,
+    obj: null
+  }));
+  links = [];
   neighbors = {};
-  nodes.forEach(n=>neighbors[n.id]=[]);
-  strongMap={};
-  links.forEach(l=>{
-    neighbors[nodes[l.source].id].push(nodes[l.target].id);
-    neighbors[nodes[l.target].id].push(nodes[l.source].id);
-    if(l.strength>0.8){
-      const a=nodes[l.source].id,b=nodes[l.target].id;
-      if(!strongMap[a])strongMap[a]=[]; if(!strongMap[b])strongMap[b]=[];
-      strongMap[a].push(b); strongMap[b].push(a);
+  nodes.forEach(n => (neighbors[n.id] = []));
+  strongMap = {};
+  potentialLinks.forEach(l => {
+    if (l.strength >= LINK_ACTIVATION_THRESHOLD) {
+      l.active = true;
+      links.push(l);
+      neighbors[nodes[l.source].id].push(nodes[l.target].id);
+      neighbors[nodes[l.target].id].push(nodes[l.source].id);
+    }
+    if (l.strength > 0.8) {
+      const a = nodes[l.source].id,
+            b = nodes[l.target].id;
+      if (!strongMap[a]) strongMap[a] = [];
+      if (!strongMap[b]) strongMap[b] = [];
+      strongMap[a].push(b);
+      strongMap[b].push(a);
     }
   });
 
@@ -214,6 +229,34 @@ const spriteMat=new THREE.SpriteMaterial({map:glowTex,blending:THREE.AdditiveBle
 
 const threshold=2;
 const lineMat=new THREE.LineBasicMaterial({color:0x8844ff,transparent:true,opacity:0.8});
+const LINK_ACTIVATION_THRESHOLD = 0.8;
+const LINK_BASE_RADIUS = 40;
+const LINK_REMOVAL_FACTOR = 1.5;
+
+function activateLink(l) {
+  if (l.active) return;
+  l.active = true;
+  links.push(l);
+  neighbors[nodes[l.source].id].push(nodes[l.target].id);
+  neighbors[nodes[l.target].id].push(nodes[l.source].id);
+  const a = nodes[l.source], b = nodes[l.target];
+  const g = new THREE.BufferGeometry().setAttribute(
+    'position', new THREE.Float32BufferAttribute([a.x, a.y, a.z, b.x, b.y, b.z], 3)
+  );
+  const ln = new THREE.Line(g, lineMat.clone());
+  lineGroup.add(ln);
+  l.obj = ln;
+}
+
+function deactivateLink(idx) {
+  const l = links[idx];
+  lineGroup.remove(l.obj);
+  neighbors[nodes[l.source].id] = neighbors[nodes[l.source].id].filter(id => id !== nodes[l.target].id);
+  neighbors[nodes[l.target].id] = neighbors[nodes[l.target].id].filter(id => id !== nodes[l.source].id);
+  l.active = false;
+  l.obj = null;
+  links.splice(idx, 1);
+}
 
 function buildClusterLabels(layerIdx){
   clusterLabels.forEach(o => scene.remove(o));
@@ -497,6 +540,26 @@ function applyAnchors(){
 
 function physics(){
   nodes.forEach(n=>{n.fx=n.fy=n.fz=0;});
+
+  potentialLinks.forEach(l => {
+    if (l.active) return;
+    const A = nodes[l.source], B = nodes[l.target];
+    const dx = B.x - A.x, dy = B.y - A.y, dz = B.z - A.z;
+    const dist = Math.hypot(dx, dy, dz);
+    const radius = LINK_BASE_RADIUS * (1 - l.strength);
+    if (dist < radius) activateLink(l);
+  });
+
+  for (let i = links.length - 1; i >= 0; i--) {
+    const l = links[i];
+    const A = nodes[l.source], B = nodes[l.target];
+    const dist = Math.hypot(B.x - A.x, B.y - A.y, B.z - A.z);
+    const maxDist = LINK_BASE_RADIUS * (1 - l.strength) * LINK_REMOVAL_FACTOR;
+    if (dist > maxDist) {
+      deactivateLink(i);
+    }
+  }
+
   links.forEach(l=>{
     const A=nodes[l.source],B=nodes[l.target];
     const boostA = counts[nodes[l.source].id] || 0;
