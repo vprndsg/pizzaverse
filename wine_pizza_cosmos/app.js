@@ -262,7 +262,7 @@ function highlightLines(){
   lineGroup.children.forEach((ln,i)=>{
     if(!selectedId){
       ln.material.color.set(0x8844ff);
-      ln.material.opacity=0.2;
+      ln.material.opacity=0.5;
       return;
     }
     const a=nodes[links[i].source].id;
@@ -579,7 +579,11 @@ function updateLabelVisibility(){
     const isHovered = !draggingNode && currentHover && currentHover.userData.id === n.id;
     const isActiveImportant = n.layer === activeLayer && n.isImportant;
 
-    el.style.opacity = (isSelectedOrNeighbor || isHovered || isActiveImportant) ? zoomFactor : 0;
+    if (isSelectedOrNeighbor || isHovered || isActiveImportant) {
+      el.style.opacity = isSelectedOrNeighbor ? 1 : zoomFactor;
+    } else {
+      el.style.opacity = 0;
+    }
   });
 
   highlightLines();

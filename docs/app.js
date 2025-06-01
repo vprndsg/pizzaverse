@@ -290,7 +290,7 @@ function highlightLines(){
   lineGroup.children.forEach((ln,i)=>{
     if(!selectedId){
       ln.material.color.set(0x8844ff);
-      ln.material.opacity=0.2;
+      ln.material.opacity=0.5;
       return;
     }
     const a=nodes[links[i].source].id;
@@ -677,7 +677,13 @@ function updateLabelVisibility(){
     const isHover = currentHover && currentHover.userData.id === n.id;
     const isActiveImportant = n.layer === activeLayer && n.isImportant;
     const show = isSelected || isNeighbor || isHover || isActiveImportant;
-    el.style.opacity = show ? t : 0;
+
+    if (show) {
+      const always = isSelected || isNeighbor;
+      el.style.opacity = always ? 1 : t;
+    } else {
+      el.style.opacity = 0;
+    }
 
   });
   highlightLines();
